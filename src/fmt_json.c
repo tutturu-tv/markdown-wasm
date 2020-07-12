@@ -482,6 +482,7 @@ static int enter_span_callback(MD_SPANTYPE type, void* detail, void* userdata) {
     case MD_SPAN_LATEXMATH:         WBufAppendCStr(r->outbuf, "<x-equation>"); break;
     case MD_SPAN_LATEXMATH_DISPLAY: WBufAppendCStr(r->outbuf, "<x-equation type=\"display\">"); break;
     case MD_SPAN_WIKILINK:          render_open_wikilink_span(r, (MD_SPAN_WIKILINK_DETAIL*) detail); break;
+    case MD_SPAN_U:                 WBufAppendCStr(r->outbuf, "<u>"); break;
   }
 
   return 0;
@@ -500,6 +501,7 @@ static int leave_span_callback(MD_SPANTYPE type, void* detail, void* userdata) {
     case MD_SPAN_LATEXMATH:         /*fall through*/
     case MD_SPAN_LATEXMATH_DISPLAY: WBufAppendCStr(r->outbuf, "</x-equation>"); break;
     case MD_SPAN_WIKILINK:          WBufAppendCStr(r->outbuf, "</x-wikilink>"); break;
+    case MD_SPAN_U:                 WBufAppendCStr(r->outbuf, "</u>"); break;
   }
 
   return 0;

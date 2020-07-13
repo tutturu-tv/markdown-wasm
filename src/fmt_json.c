@@ -370,49 +370,49 @@ static int enter_block_callback(MD_BLOCKTYPE type, void* detail, void* userdata)
   switch (type) {
     case MD_BLOCK_DOC:   WRITE_TYPE_START("doc"); break;
     case MD_BLOCK_QUOTE: WRITE_TYPE_START("quote"); break;
-    case MD_BLOCK_UL:    WRITE_TYPE_START("ul"); break;
-    case MD_BLOCK_HTML:  WRITE_TYPE_START("html"); break;
+    // case MD_BLOCK_UL:    WRITE_TYPE_START("ul"); break;
+    // case MD_BLOCK_HTML:  WRITE_TYPE_START("html"); break;
     case MD_BLOCK_P:     WRITE_TYPE_START("p"); break;
     case MD_BLOCK_TABLE: WRITE_TYPE_START("table"); break;
     case MD_BLOCK_THEAD: WRITE_TYPE_START("thead"); break;
     case MD_BLOCK_TBODY: WRITE_TYPE_START("tbody"); break;
     case MD_BLOCK_TR:    WRITE_TYPE_START("tr"); break;
-    case MD_BLOCK_HR:    WRITE_TYPE_START("hr"); break;
+    // case MD_BLOCK_HR:    WRITE_TYPE_START("hr"); break;
 
-    case MD_BLOCK_H: {
-      WRITE_TYPE_START(head[((MD_BLOCK_H_DETAIL*)detail)->level - 1]);
+    // case MD_BLOCK_H: {
+    //   WRITE_TYPE_START(head[((MD_BLOCK_H_DETAIL*)detail)->level - 1]);
       break;
     }
 
-    case MD_BLOCK_OL: {
-      WRITE_TYPE_START("ol");
-      const MD_BLOCK_OL_DETAIL* d = (const MD_BLOCK_OL_DETAIL*)detail;
-      if (d->start != 1) {
-        char buf[24];
-        snprintf(buf, sizeof(buf), ", \"start\":%u", d->start);
-        WBufAppendCStr(r->outbuf, buf);
-      }
-      if (d->is_tight) {
-        WBufAppendCStr(r->outbuf, ", \"tight\":true");
-      }
-      WBufAppendCStr(r->outbuf, ", \"delimiter\":\"");
-      WBufAppendc(r->outbuf, d->mark_delimiter);
-      WBufAppendc(r->outbuf, '"');
-      break;
-    }
+    // case MD_BLOCK_OL: {
+    //   WRITE_TYPE_START("ol");
+    //   const MD_BLOCK_OL_DETAIL* d = (const MD_BLOCK_OL_DETAIL*)detail;
+    //   if (d->start != 1) {
+    //     char buf[24];
+    //     snprintf(buf, sizeof(buf), ", \"start\":%u", d->start);
+    //     WBufAppendCStr(r->outbuf, buf);
+    //   }
+    //   if (d->is_tight) {
+    //     WBufAppendCStr(r->outbuf, ", \"tight\":true");
+    //   }
+    //   WBufAppendCStr(r->outbuf, ", \"delimiter\":\"");
+    //   WBufAppendc(r->outbuf, d->mark_delimiter);
+    //   WBufAppendc(r->outbuf, '"');
+    //   break;
+    // }
 
-    case MD_BLOCK_LI: {
-      const MD_BLOCK_LI_DETAIL* d = (const MD_BLOCK_LI_DETAIL*)detail;
-      if (d->is_task) {
-        WBufAppendCStr(r->outbuf, "{\"_\":\"task\"");
-        if (d->task_mark == 'x' || d->task_mark == 'X') {
-          WBufAppendCStr(r->outbuf, ", \"complete\":true");
-        }
-      } else {
-        WRITE_TYPE_START("li");
-      }
-      break;
-    }
+    // case MD_BLOCK_LI: {
+    //   const MD_BLOCK_LI_DETAIL* d = (const MD_BLOCK_LI_DETAIL*)detail;
+    //   if (d->is_task) {
+    //     WBufAppendCStr(r->outbuf, "{\"_\":\"task\"");
+    //     if (d->task_mark == 'x' || d->task_mark == 'X') {
+    //       WBufAppendCStr(r->outbuf, ", \"complete\":true");
+    //     }
+    //   } else {
+    //     WRITE_TYPE_START("li");
+    //   }
+    //   break;
+    // }
 
     case MD_BLOCK_CODE: {
       WRITE_TYPE_START("code");

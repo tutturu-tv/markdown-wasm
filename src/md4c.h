@@ -58,24 +58,24 @@ typedef enum MD_BLOCKTYPE {
     /* <blockquote>...</blockquote> */
     MD_BLOCK_QUOTE,
 
-    /* <ul>...</ul>
-     * Detail: Structure MD_BLOCK_UL_DETAIL. */
-    MD_BLOCK_UL,
+    // /* <ul>...</ul>
+    //  * Detail: Structure MD_BLOCK_UL_DETAIL. */
+    // MD_BLOCK_UL,
 
-    /* <ol>...</ol>
-     * Detail: Structure MD_BLOCK_OL_DETAIL. */
-    MD_BLOCK_OL,
+    // /* <ol>...</ol>
+    //  * Detail: Structure MD_BLOCK_OL_DETAIL. */
+    // MD_BLOCK_OL,
 
-    /* <li>...</li>
-     * Detail: Structure MD_BLOCK_LI_DETAIL. */
-    MD_BLOCK_LI,
+    // /* <li>...</li>
+    //  * Detail: Structure MD_BLOCK_LI_DETAIL. */
+    // MD_BLOCK_LI,
 
     /* <hr> */
-    MD_BLOCK_HR,
+    // MD_BLOCK_HR,
 
     /* <h1>...</h1> (for levels up to 6)
      * Detail: Structure MD_BLOCK_H_DETAIL. */
-    MD_BLOCK_H,
+    // MD_BLOCK_H,
 
     /* <pre><code>...</code></pre>
      * Note the text lines within code blocks are terminated with '\n'
@@ -85,7 +85,7 @@ typedef enum MD_BLOCKTYPE {
     /* Raw HTML block. This itself does not correspond to any particular HTML
      * tag. The contents of it _is_ raw HTML source intended to be put
      * in verbatim form to the HTML output. */
-    MD_BLOCK_HTML,
+    // MD_BLOCK_HTML,
 
     /* <p>...</p> */
     MD_BLOCK_P,
@@ -93,12 +93,12 @@ typedef enum MD_BLOCKTYPE {
     /* <table>...</table> and its contents.
      * Detail: Structure MD_BLOCK_TD_DETAIL (used with MD_BLOCK_TH and MD_BLOCK_TD)
      * Note all of these are used only if extension MD_FLAG_TABLES is enabled. */
-    MD_BLOCK_TABLE,
-    MD_BLOCK_THEAD,
-    MD_BLOCK_TBODY,
-    MD_BLOCK_TR,
-    MD_BLOCK_TH,
-    MD_BLOCK_TD
+    // MD_BLOCK_TABLE,
+    // MD_BLOCK_THEAD,
+    // MD_BLOCK_TBODY,
+    // MD_BLOCK_TR,
+    // MD_BLOCK_TH,
+    // MD_BLOCK_TD
 } MD_BLOCKTYPE;
 
 /* Span represents an in-line piece of a document which should be rendered with
@@ -163,7 +163,7 @@ typedef enum MD_TEXTTYPE {
     MD_TEXT_SOFTBR,     /* '\n' in source text where it is not semantically meaningful (soft break) */
 
     /* Entity.
-     * (a) Named entity, e.g. &nbsp; 
+     * (a) Named entity, e.g. &nbsp;
      *     (Note MD4C does not have a list of known entities.
      *     Anything matching the regexp /&[A-Za-z][A-Za-z0-9]{1,47};/ is
      *     treated as a named entity.)
@@ -228,30 +228,30 @@ typedef struct MD_ATTRIBUTE {
 } MD_ATTRIBUTE;
 
 
-/* Detailed info for MD_BLOCK_UL. */
-typedef struct MD_BLOCK_UL_DETAIL {
-    int is_tight;           /* Non-zero if tight list, zero if loose. */
-    MD_CHAR mark;           /* Item bullet character in MarkDown source of the list, e.g. '-', '+', '*'. */
-} MD_BLOCK_UL_DETAIL;
+// /* Detailed info for MD_BLOCK_UL. */
+// typedef struct MD_BLOCK_UL_DETAIL {
+//     int is_tight;           /* Non-zero if tight list, zero if loose. */
+//     MD_CHAR mark;           /* Item bullet character in MarkDown source of the list, e.g. '-', '+', '*'. */
+// } MD_BLOCK_UL_DETAIL;
 
-/* Detailed info for MD_BLOCK_OL. */
-typedef struct MD_BLOCK_OL_DETAIL {
-    unsigned start;         /* Start index of the ordered list. */
-    int is_tight;           /* Non-zero if tight list, zero if loose. */
-    MD_CHAR mark_delimiter; /* Character delimiting the item marks in MarkDown source, e.g. '.' or ')' */
-} MD_BLOCK_OL_DETAIL;
+// /* Detailed info for MD_BLOCK_OL. */
+// typedef struct MD_BLOCK_OL_DETAIL {
+//     unsigned start;         /* Start index of the ordered list. */
+//     int is_tight;           /* Non-zero if tight list, zero if loose. */
+//     MD_CHAR mark_delimiter; /* Character delimiting the item marks in MarkDown source, e.g. '.' or ')' */
+// } MD_BLOCK_OL_DETAIL;
 
-/* Detailed info for MD_BLOCK_LI. */
-typedef struct MD_BLOCK_LI_DETAIL {
-    int is_task;            /* Can be non-zero only with MD_FLAG_TASKLISTS */
-    MD_CHAR task_mark;      /* If is_task, then one of 'x', 'X' or ' '. Undefined otherwise. */
-    MD_OFFSET task_mark_offset;  /* If is_task, then offset in the input of the char between '[' and ']'. */
-} MD_BLOCK_LI_DETAIL;
+// /* Detailed info for MD_BLOCK_LI. */
+// typedef struct MD_BLOCK_LI_DETAIL {
+//     int is_task;            /* Can be non-zero only with MD_FLAG_TASKLISTS */
+//     MD_CHAR task_mark;      /* If is_task, then one of 'x', 'X' or ' '. Undefined otherwise. */
+//     MD_OFFSET task_mark_offset;  /* If is_task, then offset in the input of the char between '[' and ']'. */
+// } MD_BLOCK_LI_DETAIL;
 
-/* Detailed info for MD_BLOCK_H. */
-typedef struct MD_BLOCK_H_DETAIL {
-    unsigned level;         /* Header level (1 - 6) */
-} MD_BLOCK_H_DETAIL;
+// /* Detailed info for MD_BLOCK_H. */
+// typedef struct MD_BLOCK_H_DETAIL {
+//     unsigned level;         /* Header level (1 - 6) */
+// } MD_BLOCK_H_DETAIL;
 
 /* Detailed info for MD_BLOCK_CODE. */
 typedef struct MD_BLOCK_CODE_DETAIL {

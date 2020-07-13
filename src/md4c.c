@@ -188,19 +188,19 @@ struct MD_CTX_tag {
     /* Contextual info for line analysis. */
     SZ code_fence_length;   /* For checking closing fence length. */
     int html_block_type;    /* For checking closing raw HTML condition. */
-    int last_line_has_list_loosening_effect;
-    int last_list_item_starts_with_two_blank_lines;
+    // int last_line_has_list_loosening_effect;
+    // int last_list_item_starts_with_two_blank_lines;
 };
 
 enum MD_LINETYPE_tag {
     MD_LINE_BLANK,
-    MD_LINE_HR,
-    MD_LINE_ATXHEADER,
-    MD_LINE_SETEXTHEADER,
+    // MD_LINE_HR,
+    // MD_LINE_ATXHEADER,
+    // MD_LINE_SETEXTHEADER,
     MD_LINE_SETEXTUNDERLINE,
     MD_LINE_INDENTEDCODE,
     MD_LINE_FENCEDCODE,
-    MD_LINE_HTML,
+    // MD_LINE_HTML,
     MD_LINE_TEXT,
     MD_LINE_TABLE,
     MD_LINE_TABLEUNDERLINE
@@ -4117,22 +4117,27 @@ md_process_inlines(MD_CTX* ctx, const MD_LINE* lines, int n_lines)
                     }
                     break;
 
-                case '_':       /* Underline (or emphasis if we fall through). */
-                    if(ctx->parser.flags & MD_FLAG_UNDERLINE) {
-                        if(mark->flags & MD_MARK_OPENER) {
-                            while(off < mark->end) {
-                                MD_ENTER_SPAN(MD_SPAN_U, NULL);
-                                off++;
-                            }
-                        } else {
-                            while(off < mark->end) {
-                                MD_LEAVE_SPAN(MD_SPAN_U, NULL);
-                                off++;
-                            }
+                case '_':       /* Emphasis, strong emphasis. */
+                    if(mark->flags & MD_MARK_OPENER) {
+                        if((mark->end - off) % 2) {
+                            MD_ENTER_SPAN(MD_SPAN_EM, NULL);
+                            off++;
                         }
-                        break;
+                        while(off + 1 < mark->end) {
+                            MD_ENTER_SPAN(MD_SPAN_U, NULL);
+                            off += 2;
+                        }
+                    } else {
+                        while(off + 1 < mark->end) {
+                            MD_LEAVE_SPAN(MD_SPAN_U, NULL);
+                            off += 2;
+                        }
+                        if((mark->end - off) % 2) {
+                            MD_LEAVE_SPAN(MD_SPAN_EM, NULL);
+                            off++;
+                        }
                     }
-                    /* Fall though. */
+                    break;
 
                 case '*':       /* Emphasis, strong emphasis. */
                     if(mark->flags & MD_MARK_OPENER) {
@@ -4224,9 +4229,9 @@ md_process_inlines(MD_CTX* ctx, const MD_LINE* lines, int n_lines)
                 case '>':       /* Autolink or raw HTML. */
                     if(!(mark->flags & MD_MARK_AUTOLINK)) {
                         /* Raw HTML. */
-                        if(mark->flags & MD_MARK_OPENER)
-                            text_type = MD_TEXT_HTML;
-                        else
+                        // if(mark->flags & MD_MARK_OPENER)
+                        //     text_type = MD_TEXT_HTML;
+                        // else
                             text_type = MD_TEXT_NORMAL;
                         break;
                     }
@@ -4380,124 +4385,124 @@ md_analyze_table_alignment(MD_CTX* ctx, OFF beg, OFF end, MD_ALIGN* align, int n
 /* Forward declaration. */
 static int md_process_normal_block_contents(MD_CTX* ctx, const MD_LINE* lines, int n_lines);
 
-static int
-md_process_table_cell(MD_CTX* ctx, MD_BLOCKTYPE cell_type, MD_ALIGN align, OFF beg, OFF end)
-{
-    MD_LINE line;
-    MD_BLOCK_TD_DETAIL det;
-    int ret = 0;
+// static int
+// md_process_table_cell(MD_CTX* ctx, MD_BLOCKTYPE cell_type, MD_ALIGN align, OFF beg, OFF end)
+// {
+//     MD_LINE line;
+//     MD_BLOCK_TD_DETAIL det;
+//     int ret = 0;
 
-    while(beg < end  &&  ISWHITESPACE(beg))
-        beg++;
-    while(end > beg  &&  ISWHITESPACE(end-1))
-        end--;
+//     while(beg < end  &&  ISWHITESPACE(beg))
+//         beg++;
+//     while(end > beg  &&  ISWHITESPACE(end-1))
+//         end--;
 
-    det.align = align;
-    line.beg = beg;
-    line.end = end;
+//     det.align = align;
+//     line.beg = beg;
+//     line.end = end;
 
-    MD_ENTER_BLOCK(cell_type, &det);
-    MD_CHECK(md_process_normal_block_contents(ctx, &line, 1));
-    MD_LEAVE_BLOCK(cell_type, &det);
+//     MD_ENTER_BLOCK(cell_type, &det);
+//     MD_CHECK(md_process_normal_block_contents(ctx, &line, 1));
+//     MD_LEAVE_BLOCK(cell_type, &det);
 
-abort:
-    return ret;
-}
+// abort:
+//     return ret;
+// }
 
-static int
-md_process_table_row(MD_CTX* ctx, MD_BLOCKTYPE cell_type, OFF beg, OFF end,
-                     const MD_ALIGN* align, int col_count)
-{
-    MD_LINE line;
-    OFF* pipe_offs = NULL;
-    int i, j, k, n;
-    int ret = 0;
+// static int
+// md_process_table_row(MD_CTX* ctx, MD_BLOCKTYPE cell_type, OFF beg, OFF end,
+//                      const MD_ALIGN* align, int col_count)
+// {
+//     MD_LINE line;
+//     OFF* pipe_offs = NULL;
+//     int i, j, k, n;
+//     int ret = 0;
 
-    line.beg = beg;
-    line.end = end;
+//     line.beg = beg;
+//     line.end = end;
 
-    /* Break the line into table cells by identifying pipe characters who
-     * form the cell boundary. */
-    MD_CHECK(md_analyze_inlines(ctx, &line, 1, TRUE));
+//     /* Break the line into table cells by identifying pipe characters who
+//      * form the cell boundary. */
+//     MD_CHECK(md_analyze_inlines(ctx, &line, 1, TRUE));
 
-    /* We have to remember the cell boundaries in local buffer because
-     * ctx->marks[] shall be reused during cell contents processing. */
-    n = ctx->n_table_cell_boundaries + 2;
-    pipe_offs = (OFF*) malloc(n * sizeof(OFF));
-    if(pipe_offs == NULL) {
-        MD_LOG("malloc() failed.");
-        ret = -1;
-        goto abort;
-    }
-    j = 0;
-    pipe_offs[j++] = beg;
-    for(i = TABLECELLBOUNDARIES.head; i >= 0; i = ctx->marks[i].next) {
-        MD_MARK* mark = &ctx->marks[i];
-        pipe_offs[j++] = mark->end;
-    }
-    pipe_offs[j++] = end+1;
+//     /* We have to remember the cell boundaries in local buffer because
+//      * ctx->marks[] shall be reused during cell contents processing. */
+//     n = ctx->n_table_cell_boundaries + 2;
+//     pipe_offs = (OFF*) malloc(n * sizeof(OFF));
+//     if(pipe_offs == NULL) {
+//         MD_LOG("malloc() failed.");
+//         ret = -1;
+//         goto abort;
+//     }
+//     j = 0;
+//     pipe_offs[j++] = beg;
+//     for(i = TABLECELLBOUNDARIES.head; i >= 0; i = ctx->marks[i].next) {
+//         MD_MARK* mark = &ctx->marks[i];
+//         pipe_offs[j++] = mark->end;
+//     }
+//     pipe_offs[j++] = end+1;
 
-    /* Process cells. */
-    MD_ENTER_BLOCK(MD_BLOCK_TR, NULL);
-    k = 0;
-    for(i = 0; i < j-1  &&  k < col_count; i++) {
-        if(pipe_offs[i] < pipe_offs[i+1]-1)
-            MD_CHECK(md_process_table_cell(ctx, cell_type, align[k++], pipe_offs[i], pipe_offs[i+1]-1));
-    }
-    /* Make sure we call enough table cells even if the current table contains
-     * too few of them. */
-    while(k < col_count)
-        MD_CHECK(md_process_table_cell(ctx, cell_type, align[k++], 0, 0));
-    MD_LEAVE_BLOCK(MD_BLOCK_TR, NULL);
+//     /* Process cells. */
+//     MD_ENTER_BLOCK(MD_BLOCK_TR, NULL);
+//     k = 0;
+//     for(i = 0; i < j-1  &&  k < col_count; i++) {
+//         if(pipe_offs[i] < pipe_offs[i+1]-1)
+//             MD_CHECK(md_process_table_cell(ctx, cell_type, align[k++], pipe_offs[i], pipe_offs[i+1]-1));
+//     }
+//     /* Make sure we call enough table cells even if the current table contains
+//      * too few of them. */
+//     while(k < col_count)
+//         MD_CHECK(md_process_table_cell(ctx, cell_type, align[k++], 0, 0));
+//     MD_LEAVE_BLOCK(MD_BLOCK_TR, NULL);
 
-abort:
-    free(pipe_offs);
+// abort:
+//     free(pipe_offs);
 
-    /* Free any temporary memory blocks stored within some dummy marks. */
-    for(i = PTR_CHAIN.head; i >= 0; i = ctx->marks[i].next)
-        free(md_mark_get_ptr(ctx, i));
-    PTR_CHAIN.head = -1;
-    PTR_CHAIN.tail = -1;
+//     /* Free any temporary memory blocks stored within some dummy marks. */
+//     for(i = PTR_CHAIN.head; i >= 0; i = ctx->marks[i].next)
+//         free(md_mark_get_ptr(ctx, i));
+//     PTR_CHAIN.head = -1;
+//     PTR_CHAIN.tail = -1;
 
-    return ret;
-}
+//     return ret;
+// }
 
-static int
-md_process_table_block_contents(MD_CTX* ctx, int col_count, const MD_LINE* lines, int n_lines)
-{
-    MD_ALIGN* align;
-    int i;
-    int ret = 0;
+// static int
+// md_process_table_block_contents(MD_CTX* ctx, int col_count, const MD_LINE* lines, int n_lines)
+// {
+//     MD_ALIGN* align;
+//     int i;
+//     int ret = 0;
 
-    /* At least two lines have to be present: The column headers and the line
-     * with the underlines. */
-    MD_ASSERT(n_lines >= 2);
+//     /* At least two lines have to be present: The column headers and the line
+//      * with the underlines. */
+//     MD_ASSERT(n_lines >= 2);
 
-    align = malloc(col_count * sizeof(MD_ALIGN));
-    if(align == NULL) {
-        MD_LOG("malloc() failed.");
-        ret = -1;
-        goto abort;
-    }
+//     align = malloc(col_count * sizeof(MD_ALIGN));
+//     if(align == NULL) {
+//         MD_LOG("malloc() failed.");
+//         ret = -1;
+//         goto abort;
+//     }
 
-    md_analyze_table_alignment(ctx, lines[1].beg, lines[1].end, align, col_count);
+//     md_analyze_table_alignment(ctx, lines[1].beg, lines[1].end, align, col_count);
 
-    MD_ENTER_BLOCK(MD_BLOCK_THEAD, NULL);
-    MD_CHECK(md_process_table_row(ctx, MD_BLOCK_TH,
-                        lines[0].beg, lines[0].end, align, col_count));
-    MD_LEAVE_BLOCK(MD_BLOCK_THEAD, NULL);
+//     MD_ENTER_BLOCK(MD_BLOCK_THEAD, NULL);
+//     MD_CHECK(md_process_table_row(ctx, MD_BLOCK_TH,
+//                         lines[0].beg, lines[0].end, align, col_count));
+//     MD_LEAVE_BLOCK(MD_BLOCK_THEAD, NULL);
 
-    MD_ENTER_BLOCK(MD_BLOCK_TBODY, NULL);
-    for(i = 2; i < n_lines; i++) {
-        MD_CHECK(md_process_table_row(ctx, MD_BLOCK_TD,
-                        lines[i].beg, lines[i].end, align, col_count));
-    }
-    MD_LEAVE_BLOCK(MD_BLOCK_TBODY, NULL);
+//     MD_ENTER_BLOCK(MD_BLOCK_TBODY, NULL);
+//     for(i = 2; i < n_lines; i++) {
+//         MD_CHECK(md_process_table_row(ctx, MD_BLOCK_TD,
+//                         lines[i].beg, lines[i].end, align, col_count));
+//     }
+//     MD_LEAVE_BLOCK(MD_BLOCK_TBODY, NULL);
 
-abort:
-    free(align);
-    return ret;
-}
+// abort:
+//     free(align);
+//     return ret;
+// }
 
 
 /**************************
@@ -4659,7 +4664,7 @@ static int
 md_process_leaf_block(MD_CTX* ctx, const MD_BLOCK* block)
 {
     union {
-        MD_BLOCK_H_DETAIL header;
+        // MD_BLOCK_H_DETAIL header;
         MD_BLOCK_CODE_DETAIL code;
     } det;
     MD_ATTRIBUTE_BUILD info_build;
@@ -4670,15 +4675,15 @@ md_process_leaf_block(MD_CTX* ctx, const MD_BLOCK* block)
 
     memset(&det, 0, sizeof(det));
 
-    if(ctx->n_containers == 0)
+    // if(ctx->n_containers == 0)
         is_in_tight_list = FALSE;
-    else
-        is_in_tight_list = !ctx->containers[ctx->n_containers-1].is_loose;
+    // else
+    //     is_in_tight_list = !ctx->containers[ctx->n_containers-1].is_loose;
 
     switch(block->type) {
-        case MD_BLOCK_H:
-            det.header.level = block->data;
-            break;
+        // case MD_BLOCK_H:
+        //     det.header.level = block->data;
+        //     break;
 
         case MD_BLOCK_CODE:
             /* For fenced code block, we may need to set the info string. */
@@ -4699,24 +4704,24 @@ md_process_leaf_block(MD_CTX* ctx, const MD_BLOCK* block)
 
     /* Process the block contents accordingly to is type. */
     switch(block->type) {
-        case MD_BLOCK_HR:
-            /* noop */
-            break;
+        // case MD_BLOCK_HR:
+        //     /* noop */
+        //     break;
 
         case MD_BLOCK_CODE:
             MD_CHECK(md_process_code_block_contents(ctx, (block->data != 0),
                             (const MD_VERBATIMLINE*)(block + 1), block->n_lines));
             break;
 
-        case MD_BLOCK_HTML:
-            MD_CHECK(md_process_verbatim_block_contents(ctx, MD_TEXT_HTML,
-                            (const MD_VERBATIMLINE*)(block + 1), block->n_lines));
-            break;
+        // case MD_BLOCK_HTML:
+        //     MD_CHECK(md_process_verbatim_block_contents(ctx, MD_TEXT_HTML,
+        //                     (const MD_VERBATIMLINE*)(block + 1), block->n_lines));
+        //     break;
 
-        case MD_BLOCK_TABLE:
-            MD_CHECK(md_process_table_block_contents(ctx, block->data,
-                            (const MD_LINE*)(block + 1), block->n_lines));
-            break;
+        // case MD_BLOCK_TABLE:
+        //     MD_CHECK(md_process_table_block_contents(ctx, block->data,
+        //                     (const MD_LINE*)(block + 1), block->n_lines));
+        //     break;
 
         default:
             MD_CHECK(md_process_normal_block_contents(ctx,
@@ -4749,50 +4754,50 @@ md_process_all_blocks(MD_CTX* ctx)
 
     while(byte_off < ctx->n_block_bytes) {
         MD_BLOCK* block = (MD_BLOCK*)((char*)ctx->block_bytes + byte_off);
-        union {
-            MD_BLOCK_UL_DETAIL ul;
-            MD_BLOCK_OL_DETAIL ol;
-            MD_BLOCK_LI_DETAIL li;
-        } det;
+        // union {
+        //     MD_BLOCK_UL_DETAIL ul;
+        //     MD_BLOCK_OL_DETAIL ol;
+        //     MD_BLOCK_LI_DETAIL li;
+        // } det;
 
-        switch(block->type) {
-            case MD_BLOCK_UL:
-                det.ul.is_tight = (block->flags & MD_BLOCK_LOOSE_LIST) ? FALSE : TRUE;
-                det.ul.mark = (CHAR) block->data;
-                break;
+        // switch(block->type) {
+        //     case MD_BLOCK_UL:
+        //         det.ul.is_tight = (block->flags & MD_BLOCK_LOOSE_LIST) ? FALSE : TRUE;
+        //         det.ul.mark = (CHAR) block->data;
+        //         break;
 
-            case MD_BLOCK_OL:
-                det.ol.start = block->n_lines;
-                det.ol.is_tight =  (block->flags & MD_BLOCK_LOOSE_LIST) ? FALSE : TRUE;
-                det.ol.mark_delimiter = (CHAR) block->data;
-                break;
+        //     case MD_BLOCK_OL:
+        //         det.ol.start = block->n_lines;
+        //         det.ol.is_tight =  (block->flags & MD_BLOCK_LOOSE_LIST) ? FALSE : TRUE;
+        //         det.ol.mark_delimiter = (CHAR) block->data;
+        //         break;
 
-            case MD_BLOCK_LI:
-                det.li.is_task = (block->data != 0);
-                det.li.task_mark = (CHAR) block->data;
-                det.li.task_mark_offset = (OFF) block->n_lines;
-                break;
+        //     case MD_BLOCK_LI:
+        //         det.li.is_task = (block->data != 0);
+        //         det.li.task_mark = (CHAR) block->data;
+        //         det.li.task_mark_offset = (OFF) block->n_lines;
+        //         break;
 
-            default:
-                /* noop */
-                break;
-        }
+        //     default:
+        //         /* noop */
+        //         break;
+        // }
 
         if(block->flags & MD_BLOCK_CONTAINER) {
             if(block->flags & MD_BLOCK_CONTAINER_CLOSER) {
-                MD_LEAVE_BLOCK(block->type, &det);
+                MD_LEAVE_BLOCK(block->type, NULL);
 
-                if(block->type == MD_BLOCK_UL || block->type == MD_BLOCK_OL || block->type == MD_BLOCK_QUOTE)
+                if(/* block->type == MD_BLOCK_UL || block->type == MD_BLOCK_OL || */block->type == MD_BLOCK_QUOTE)
                     ctx->n_containers--;
             }
 
             if(block->flags & MD_BLOCK_CONTAINER_OPENER) {
-                MD_ENTER_BLOCK(block->type, &det);
+                MD_ENTER_BLOCK(block->type, NULL);
 
-                if(block->type == MD_BLOCK_UL || block->type == MD_BLOCK_OL) {
+                /*if(block->type == MD_BLOCK_UL || block->type == MD_BLOCK_OL) {
                     ctx->containers[ctx->n_containers].is_loose = (block->flags & MD_BLOCK_LOOSE_LIST);
                     ctx->n_containers++;
-                } else if(block->type == MD_BLOCK_QUOTE) {
+                } else */if(block->type == MD_BLOCK_QUOTE) {
                     /* This causes that any text in a block quote, even if
                      * nested inside a tight list item, is wrapped with
                      * <p>...</p>. */
@@ -4803,7 +4808,7 @@ md_process_all_blocks(MD_CTX* ctx)
         } else {
             MD_CHECK(md_process_leaf_block(ctx, block));
 
-            if(block->type == MD_BLOCK_CODE || block->type == MD_BLOCK_HTML)
+            if(block->type == MD_BLOCK_CODE)// || block->type == MD_BLOCK_HTML)
                 byte_off += block->n_lines * sizeof(MD_VERBATIMLINE);
             else
                 byte_off += block->n_lines * sizeof(MD_LINE);
@@ -4866,14 +4871,14 @@ md_start_new_block(MD_CTX* ctx, const MD_LINE_ANALYSIS* line)
         return -1;
 
     switch(line->type) {
-        case MD_LINE_HR:
-            block->type = MD_BLOCK_HR;
-            break;
+        // case MD_LINE_HR:
+        //     block->type = MD_BLOCK_HR;
+        //     break;
 
-        case MD_LINE_ATXHEADER:
-        case MD_LINE_SETEXTHEADER:
-            block->type = MD_BLOCK_H;
-            break;
+        // case MD_LINE_ATXHEADER:
+        // case MD_LINE_SETEXTHEADER:
+        //     block->type = MD_BLOCK_H;
+        //     break;
 
         case MD_LINE_FENCEDCODE:
         case MD_LINE_INDENTEDCODE:
@@ -4884,9 +4889,9 @@ md_start_new_block(MD_CTX* ctx, const MD_LINE_ANALYSIS* line)
             block->type = MD_BLOCK_P;
             break;
 
-        case MD_LINE_HTML:
-            block->type = MD_BLOCK_HTML;
-            break;
+        // case MD_LINE_HTML:
+        //     block->type = MD_BLOCK_HTML;
+        //     break;
 
         case MD_LINE_BLANK:
         case MD_LINE_SETEXTUNDERLINE:
@@ -4966,8 +4971,8 @@ md_end_current_block(MD_CTX* ctx)
     /* Check whether there is a reference definition. (We do this here instead
      * of in md_analyze_line() because reference definition can take multiple
      * lines.) */
-    if(ctx->current_block->type == MD_BLOCK_P  ||
-       (ctx->current_block->type == MD_BLOCK_H  &&  (ctx->current_block->flags & MD_BLOCK_SETEXT_HEADER)))
+    if(ctx->current_block->type == MD_BLOCK_P) // ||
+    //    (ctx->current_block->type == MD_BLOCK_H  &&  (ctx->current_block->flags & MD_BLOCK_SETEXT_HEADER)))
     {
         MD_LINE* lines = (MD_LINE*) (ctx->current_block + 1);
         if(CH(lines[0].beg) == _T('[')) {
@@ -4977,20 +4982,20 @@ md_end_current_block(MD_CTX* ctx)
         }
     }
 
-    if(ctx->current_block->type == MD_BLOCK_H  &&  (ctx->current_block->flags & MD_BLOCK_SETEXT_HEADER)) {
-        int n_lines = ctx->current_block->n_lines;
+    // if(ctx->current_block->type == MD_BLOCK_H  &&  (ctx->current_block->flags & MD_BLOCK_SETEXT_HEADER)) {
+    //     int n_lines = ctx->current_block->n_lines;
 
-        if(n_lines > 1) {
-            /* Get rid of the underline. */
-            ctx->current_block->n_lines--;
-            ctx->n_block_bytes -= sizeof(MD_LINE);
-        } else {
-            /* Only the underline has left after eating the ref. defs.
-             * Keep the line as beginning of a new ordinary paragraph. */
-            ctx->current_block->type = MD_BLOCK_P;
-            return 0;
-        }
-    }
+    //     if(n_lines > 1) {
+    //         /* Get rid of the underline. */
+    //         ctx->current_block->n_lines--;
+    //         ctx->n_block_bytes -= sizeof(MD_LINE);
+    //     } else {
+    //         /* Only the underline has left after eating the ref. defs.
+    //          * Keep the line as beginning of a new ordinary paragraph. */
+    //         ctx->current_block->type = MD_BLOCK_P;
+    //         return 0;
+    //     }
+    // }
 
     /* Mark we are not building any block anymore. */
     ctx->current_block = NULL;
@@ -5004,7 +5009,7 @@ md_add_line_into_current_block(MD_CTX* ctx, const MD_LINE_ANALYSIS* analysis)
 {
     MD_ASSERT(ctx->current_block != NULL);
 
-    if(ctx->current_block->type == MD_BLOCK_CODE || ctx->current_block->type == MD_BLOCK_HTML) {
+    if(ctx->current_block->type == MD_BLOCK_CODE) { // || ctx->current_block->type == MD_BLOCK_HTML) {
         MD_VERBATIMLINE* line;
 
         line = (MD_VERBATIMLINE*) md_push_block_bytes(ctx, sizeof(MD_VERBATIMLINE));
@@ -5494,30 +5499,30 @@ md_enter_child_containers(MD_CTX* ctx, int n_children, unsigned data)
 
     for(i = ctx->n_containers - n_children; i < ctx->n_containers; i++) {
         MD_CONTAINER* c = &ctx->containers[i];
-        int is_ordered_list = FALSE;
+        // int is_ordered_list = FALSE;
 
         switch(c->ch) {
-            case _T(')'):
-            case _T('.'):
-                is_ordered_list = TRUE;
-                /* Pass through */
+            // case _T(')'):
+            // case _T('.'):
+            //     is_ordered_list = TRUE;
+            //     /* Pass through */
 
-            case _T('-'):
-            case _T('+'):
-            case _T('*'):
-                /* Remember offset in ctx->block_bytes so we can revisit the
-                 * block if we detect it is a loose list. */
-                md_end_current_block(ctx);
-                c->block_byte_off = ctx->n_block_bytes;
+            // case _T('-'):
+            // case _T('+'):
+            // case _T('*'):
+            //     /* Remember offset in ctx->block_bytes so we can revisit the
+            //      * block if we detect it is a loose list. */
+            //     md_end_current_block(ctx);
+            //     c->block_byte_off = ctx->n_block_bytes;
 
-                MD_CHECK(md_push_container_bytes(ctx,
-                                (is_ordered_list ? MD_BLOCK_OL : MD_BLOCK_UL),
-                                c->start, data, MD_BLOCK_CONTAINER_OPENER));
-                MD_CHECK(md_push_container_bytes(ctx, MD_BLOCK_LI,
-                                c->task_mark_off,
-                                (c->is_task ? CH(c->task_mark_off) : 0),
-                                MD_BLOCK_CONTAINER_OPENER));
-                break;
+            //     MD_CHECK(md_push_container_bytes(ctx,
+            //                     (is_ordered_list ? MD_BLOCK_OL : MD_BLOCK_UL),
+            //                     c->start, data, MD_BLOCK_CONTAINER_OPENER));
+            //     MD_CHECK(md_push_container_bytes(ctx, MD_BLOCK_LI,
+            //                     c->task_mark_off,
+            //                     (c->is_task ? CH(c->task_mark_off) : 0),
+            //                     MD_BLOCK_CONTAINER_OPENER));
+            //     break;
 
             case _T('>'):
                 MD_CHECK(md_push_container_bytes(ctx, MD_BLOCK_QUOTE, 0, 0, MD_BLOCK_CONTAINER_OPENER));
@@ -5540,24 +5545,24 @@ md_leave_child_containers(MD_CTX* ctx, int n_keep)
 
     while(ctx->n_containers > n_keep) {
         MD_CONTAINER* c = &ctx->containers[ctx->n_containers-1];
-        int is_ordered_list = FALSE;
+        // int is_ordered_list = FALSE;
 
         switch(c->ch) {
-            case _T(')'):
-            case _T('.'):
-                is_ordered_list = TRUE;
-                /* Pass through */
+            // case _T(')'):
+            // case _T('.'):
+            //     is_ordered_list = TRUE;
+            //     /* Pass through */
 
-            case _T('-'):
-            case _T('+'):
-            case _T('*'):
-                MD_CHECK(md_push_container_bytes(ctx, MD_BLOCK_LI,
-                                c->task_mark_off, (c->is_task ? CH(c->task_mark_off) : 0),
-                                MD_BLOCK_CONTAINER_CLOSER));
-                MD_CHECK(md_push_container_bytes(ctx,
-                                (is_ordered_list ? MD_BLOCK_OL : MD_BLOCK_UL), 0,
-                                c->ch, MD_BLOCK_CONTAINER_CLOSER));
-                break;
+            // case _T('-'):
+            // case _T('+'):
+            // case _T('*'):
+            //     MD_CHECK(md_push_container_bytes(ctx, MD_BLOCK_LI,
+            //                     c->task_mark_off, (c->is_task ? CH(c->task_mark_off) : 0),
+            //                     MD_BLOCK_CONTAINER_CLOSER));
+            //     MD_CHECK(md_push_container_bytes(ctx,
+            //                     (is_ordered_list ? MD_BLOCK_OL : MD_BLOCK_UL), 0,
+            //                     c->ch, MD_BLOCK_CONTAINER_CLOSER));
+            //     break;
 
             case _T('>'):
                 MD_CHECK(md_push_container_bytes(ctx, MD_BLOCK_QUOTE, 0,
@@ -5597,38 +5602,38 @@ md_is_container_mark(MD_CTX* ctx, unsigned indent, OFF beg, OFF* p_end, MD_CONTA
         return TRUE;
     }
 
-    /* Check for list item bullet mark. */
-    if(off+1 < ctx->size  &&  ISANYOF(off, _T("-+*"))  &&  (ISBLANK(off+1) || ISNEWLINE(off+1))) {
-        p_container->ch = CH(off);
-        p_container->is_loose = FALSE;
-        p_container->is_task = FALSE;
-        p_container->mark_indent = indent;
-        p_container->contents_indent = indent + 1;
-        *p_end = off + 1;
-        return TRUE;
-    }
+    // /* Check for list item bullet mark. */
+    // if(off+1 < ctx->size  &&  ISANYOF(off, _T("-+*"))  &&  (ISBLANK(off+1) || ISNEWLINE(off+1))) {
+    //     p_container->ch = CH(off);
+    //     p_container->is_loose = FALSE;
+    //     p_container->is_task = FALSE;
+    //     p_container->mark_indent = indent;
+    //     p_container->contents_indent = indent + 1;
+    //     *p_end = off + 1;
+    //     return TRUE;
+    // }
 
-    /* Check for ordered list item marks. */
-    max_end = off + 9;
-    if(max_end > ctx->size)
-        max_end = ctx->size;
-    p_container->start = 0;
-    while(off < max_end  &&  ISDIGIT(off)) {
-        p_container->start = p_container->start * 10 + CH(off) - _T('0');
-        off++;
-    }
-    if(off > beg  &&  off+1 < ctx->size  &&
-       (CH(off) == _T('.') || CH(off) == _T(')'))  &&
-       (ISBLANK(off+1) || ISNEWLINE(off+1)))
-    {
-        p_container->ch = CH(off);
-        p_container->is_loose = FALSE;
-        p_container->is_task = FALSE;
-        p_container->mark_indent = indent;
-        p_container->contents_indent = indent + off - beg + 1;
-        *p_end = off + 1;
-        return TRUE;
-    }
+    // /* Check for ordered list item marks. */
+    // max_end = off + 9;
+    // if(max_end > ctx->size)
+    //     max_end = ctx->size;
+    // p_container->start = 0;
+    // while(off < max_end  &&  ISDIGIT(off)) {
+    //     p_container->start = p_container->start * 10 + CH(off) - _T('0');
+    //     off++;
+    // }
+    // if(off > beg  &&  off+1 < ctx->size  &&
+    //    (CH(off) == _T('.') || CH(off) == _T(')'))  &&
+    //    (ISBLANK(off+1) || ISNEWLINE(off+1)))
+    // {
+    //     p_container->ch = CH(off);
+    //     p_container->is_loose = FALSE;
+    //     p_container->is_task = FALSE;
+    //     p_container->mark_indent = indent;
+    //     p_container->contents_indent = indent + off - beg + 1;
+    //     *p_end = off + 1;
+    //     return TRUE;
+    // }
 
     return FALSE;
 }
@@ -5664,7 +5669,7 @@ md_analyze_line(MD_CTX* ctx, OFF beg, OFF* p_end,
     int n_brothers = 0;
     int n_children = 0;
     MD_CONTAINER container = { 0 };
-    int prev_line_has_list_loosening_effect = ctx->last_line_has_list_loosening_effect;
+    // int prev_line_has_list_loosening_effect = ctx->last_line_has_list_loosening_effect;
     OFF off = beg;
     OFF hr_killer = 0;
     int ret = 0;
@@ -5722,7 +5727,7 @@ md_analyze_line(MD_CTX* ctx, OFF beg, OFF* p_end,
             if(line->indent < ctx->code_indent_offset) {
                 if(md_is_closing_code_fence(ctx, CH(pivot_line->beg), off, &off)) {
                     line->type = MD_LINE_BLANK;
-                    ctx->last_line_has_list_loosening_effect = FALSE;
+                    // ctx->last_line_has_list_loosening_effect = FALSE;
                     break;
                 }
             }
@@ -5739,157 +5744,121 @@ md_analyze_line(MD_CTX* ctx, OFF beg, OFF* p_end,
             }
         }
 
-        /* Check whether we are HTML block continuation. */
-        if(pivot_line->type == MD_LINE_HTML  &&  ctx->html_block_type > 0) {
-            int html_block_type;
+    //     /* Check whether we are HTML block continuation. */
+    //     if(pivot_line->type == MD_LINE_HTML  &&  ctx->html_block_type > 0) {
+    //         int html_block_type;
 
-            html_block_type = md_is_html_block_end_condition(ctx, off, &off);
-            if(html_block_type > 0) {
-                MD_ASSERT(html_block_type == ctx->html_block_type);
+    //         html_block_type = md_is_html_block_end_condition(ctx, off, &off);
+    //         if(html_block_type > 0) {
+    //             MD_ASSERT(html_block_type == ctx->html_block_type);
 
-                /* Make sure this is the last line of the block. */
-                ctx->html_block_type = 0;
+    //             /* Make sure this is the last line of the block. */
+    //             ctx->html_block_type = 0;
 
-                /* Some end conditions serve as blank lines at the same time. */
-                if(html_block_type == 6 || html_block_type == 7) {
-                    line->type = MD_LINE_BLANK;
-                    line->indent = 0;
-                    break;
-                }
-            }
+    //             /* Some end conditions serve as blank lines at the same time. */
+    //             if(html_block_type == 6 || html_block_type == 7) {
+    //                 line->type = MD_LINE_BLANK;
+    //                 line->indent = 0;
+    //                 break;
+    //             }
+    //         }
 
-            if(n_parents == ctx->n_containers) {
-                line->type = MD_LINE_HTML;
-                break;
-            }
-        }
+    //         if(n_parents == ctx->n_containers) {
+    //             line->type = MD_LINE_HTML;
+    //             break;
+    //         }
+    //     }
 
-        /* Check for blank line. */
-        if(off >= ctx->size  ||  ISNEWLINE(off)) {
-            if(pivot_line->type == MD_LINE_INDENTEDCODE  &&  n_parents == ctx->n_containers) {
-                line->type = MD_LINE_INDENTEDCODE;
-                if(line->indent > ctx->code_indent_offset)
-                    line->indent -= ctx->code_indent_offset;
-                else
-                    line->indent = 0;
-                ctx->last_line_has_list_loosening_effect = FALSE;
-            } else {
-                line->type = MD_LINE_BLANK;
-                ctx->last_line_has_list_loosening_effect = (n_parents > 0  &&
-                        n_brothers + n_children == 0  &&
-                        ctx->containers[n_parents-1].ch != _T('>'));
+    //     /* Check for blank line. */
+    //     if(off >= ctx->size  ||  ISNEWLINE(off)) {
+    //         if(pivot_line->type == MD_LINE_INDENTEDCODE  &&  n_parents == ctx->n_containers) {
+    //             line->type = MD_LINE_INDENTEDCODE;
+    //             if(line->indent > ctx->code_indent_offset)
+    //                 line->indent -= ctx->code_indent_offset;
+    //             else
+    //                 line->indent = 0;
+    //             ctx->last_line_has_list_loosening_effect = FALSE;
+    //         } else {
+    //             line->type = MD_LINE_BLANK;
+    //             ctx->last_line_has_list_loosening_effect = (n_parents > 0  &&
+    //                     n_brothers + n_children == 0  &&
+    //                     ctx->containers[n_parents-1].ch != _T('>'));
 
-    #if 1
-                /* See https://github.com/mity/md4c/issues/6
-                 *
-                 * This ugly checking tests we are in (yet empty) list item but not
-                 * its very first line (with the list item mark).
-                 *
-                 * If we are such blank line, then any following non-blank line
-                 * which would be part of this list item actually ends the list
-                 * because "a list item can begin with at most one blank line."
-                 */
-                if(n_parents > 0  &&  ctx->containers[n_parents-1].ch != _T('>')  &&
-                   n_brothers + n_children == 0  &&  ctx->current_block == NULL  &&
-                   ctx->n_block_bytes > (int) sizeof(MD_BLOCK))
-                {
-                    MD_BLOCK* top_block = (MD_BLOCK*) ((char*)ctx->block_bytes + ctx->n_block_bytes - sizeof(MD_BLOCK));
-                    if(top_block->type == MD_BLOCK_LI)
-                        ctx->last_list_item_starts_with_two_blank_lines = TRUE;
-                }
-    #endif
-            }
-            break;
-        } else {
-    #if 1
-            /* This is 2nd half of the hack. If the flag is set (that is there
-             * were 2nd blank line at the start of the list item) and we would also
-             * belonging to such list item, then interrupt the list. */
-            ctx->last_line_has_list_loosening_effect = FALSE;
-            if(ctx->last_list_item_starts_with_two_blank_lines) {
-                if(n_parents > 0  &&  ctx->containers[n_parents-1].ch != _T('>')  &&
-                   n_brothers + n_children == 0  &&  ctx->current_block == NULL  &&
-                   ctx->n_block_bytes > (int) sizeof(MD_BLOCK))
-                {
-                    MD_BLOCK* top_block = (MD_BLOCK*) ((char*)ctx->block_bytes + ctx->n_block_bytes - sizeof(MD_BLOCK));
-                    if(top_block->type == MD_BLOCK_LI)
-                        n_parents--;
-                }
+    // #if 1
+    //             /* See https://github.com/mity/md4c/issues/6
+    //              *
+    //              * This ugly checking tests we are in (yet empty) list item but not
+    //              * its very first line (with the list item mark).
+    //              *
+    //              * If we are such blank line, then any following non-blank line
+    //              * which would be part of this list item actually ends the list
+    //              * because "a list item can begin with at most one blank line."
+    //              */
+    //             if(n_parents > 0  &&  ctx->containers[n_parents-1].ch != _T('>')  &&
+    //                n_brothers + n_children == 0  &&  ctx->current_block == NULL  &&
+    //                ctx->n_block_bytes > (int) sizeof(MD_BLOCK))
+    //             {
+    //                 MD_BLOCK* top_block = (MD_BLOCK*) ((char*)ctx->block_bytes + ctx->n_block_bytes - sizeof(MD_BLOCK));
+    //                 if(top_block->type == MD_BLOCK_LI)
+    //                     ctx->last_list_item_starts_with_two_blank_lines = TRUE;
+    //             }
+    // #endif
+    //         }
+    //         break;
+    //     } else {
+    // #if 1
+    //         /* This is 2nd half of the hack. If the flag is set (that is there
+    //          * were 2nd blank line at the start of the list item) and we would also
+    //          * belonging to such list item, then interrupt the list. */
+    //         ctx->last_line_has_list_loosening_effect = FALSE;
+    //         if(ctx->last_list_item_starts_with_two_blank_lines) {
+    //             if(n_parents > 0  &&  ctx->containers[n_parents-1].ch != _T('>')  &&
+    //                n_brothers + n_children == 0  &&  ctx->current_block == NULL  &&
+    //                ctx->n_block_bytes > (int) sizeof(MD_BLOCK))
+    //             {
+    //                 MD_BLOCK* top_block = (MD_BLOCK*) ((char*)ctx->block_bytes + ctx->n_block_bytes - sizeof(MD_BLOCK));
+    //                 if(top_block->type == MD_BLOCK_LI)
+    //                     n_parents--;
+    //             }
 
-                ctx->last_list_item_starts_with_two_blank_lines = FALSE;
-            }
-    #endif
-        }
+    //             ctx->last_list_item_starts_with_two_blank_lines = FALSE;
+    //         }
+    // #endif
+    //     }
 
-        /* Check whether we are Setext underline. */
-        if(line->indent < ctx->code_indent_offset  &&  pivot_line->type == MD_LINE_TEXT
-            &&  (CH(off) == _T('=') || CH(off) == _T('-'))
-            &&  (n_parents == ctx->n_containers))
-        {
-            unsigned level;
+        // /* Check whether we are Setext underline. */
+        // if(line->indent < ctx->code_indent_offset  &&  pivot_line->type == MD_LINE_TEXT
+        //     &&  (CH(off) == _T('=') || CH(off) == _T('-'))
+        //     &&  (n_parents == ctx->n_containers))
+        // {
+        //     unsigned level;
 
-            if(md_is_setext_underline(ctx, off, &off, &level)) {
-                line->type = MD_LINE_SETEXTUNDERLINE;
-                line->data = level;
-                break;
-            }
-        }
+        //     if(md_is_setext_underline(ctx, off, &off, &level)) {
+        //         line->type = MD_LINE_SETEXTUNDERLINE;
+        //         line->data = level;
+        //         break;
+        //     }
+        // }
 
-        /* Check for thematic break line. */
-        if(line->indent < ctx->code_indent_offset  &&  ISANYOF(off, _T("-_*"))  &&  off >= hr_killer) {
-            if(md_is_hr_line(ctx, off, &off, &hr_killer)) {
-                line->type = MD_LINE_HR;
-                break;
-            }
-        }
+        // /* Check for thematic break line. */
+        // if(line->indent < ctx->code_indent_offset  &&  ISANYOF(off, _T("-_*"))  &&  off >= hr_killer) {
+        //     if(md_is_hr_line(ctx, off, &off, &hr_killer)) {
+        //         line->type = MD_LINE_HR;
+        //         break;
+        //     }
+        // }
 
-        /* Check for "brother" container. I.e. whether we are another list item
-         * in already started list. */
-        if(n_parents < ctx->n_containers  &&  n_brothers + n_children == 0) {
-            OFF tmp;
-
-            if(md_is_container_mark(ctx, line->indent, off, &tmp, &container)  &&
-               md_is_container_compatible(&ctx->containers[n_parents], &container))
-            {
-                pivot_line = &md_dummy_blank_line;
-
-                off = tmp;
-
-                total_indent += container.contents_indent - container.mark_indent;
-                line->indent = md_line_indentation(ctx, total_indent, off, &off);
-                total_indent += line->indent;
-                line->beg = off;
-
-                /* Some of the following whitespace actually still belongs to the mark. */
-                if(off >= ctx->size || ISNEWLINE(off)) {
-                    container.contents_indent++;
-                } else if(line->indent <= ctx->code_indent_offset) {
-                    container.contents_indent += line->indent;
-                    line->indent = 0;
-                } else {
-                    container.contents_indent += 1;
-                    line->indent--;
-                }
-
-                ctx->containers[n_parents].mark_indent = container.mark_indent;
-                ctx->containers[n_parents].contents_indent = container.contents_indent;
-
-                n_brothers++;
-                continue;
-            }
-        }
-
-        /* Check for indented code.
-         * Note indented code block cannot interrupt a paragraph. */
-        if(line->indent >= ctx->code_indent_offset  &&
-            (pivot_line->type == MD_LINE_BLANK || pivot_line->type == MD_LINE_INDENTEDCODE))
-        {
-            line->type = MD_LINE_INDENTEDCODE;
-            MD_ASSERT(line->indent >= ctx->code_indent_offset);
-            line->indent -= ctx->code_indent_offset;
-            line->data = 0;
-            break;
-        }
+        // /* Check for indented code.
+        //  * Note indented code block cannot interrupt a paragraph. */
+        // if(line->indent >= ctx->code_indent_offset  &&
+        //     (pivot_line->type == MD_LINE_BLANK || pivot_line->type == MD_LINE_INDENTEDCODE))
+        // {
+        //     line->type = MD_LINE_INDENTEDCODE;
+        //     MD_ASSERT(line->indent >= ctx->code_indent_offset);
+        //     line->indent -= ctx->code_indent_offset;
+        //     line->data = 0;
+        //     break;
+        // }
 
         /* Check for start of a new container block. */
         if(line->indent < ctx->code_indent_offset  &&
@@ -5940,16 +5909,16 @@ md_analyze_line(MD_CTX* ctx, OFF beg, OFF* p_end,
             break;
         }
 
-        /* Check for ATX header. */
-        if(line->indent < ctx->code_indent_offset  &&  CH(off) == _T('#')) {
-            unsigned level;
+        // /* Check for ATX header. */
+        // if(line->indent < ctx->code_indent_offset  &&  CH(off) == _T('#')) {
+        //     unsigned level;
 
-            if(md_is_atxheader_line(ctx, off, &line->beg, &off, &level)) {
-                line->type = MD_LINE_ATXHEADER;
-                line->data = level;
-                break;
-            }
-        }
+        //     if(md_is_atxheader_line(ctx, off, &line->beg, &off, &level)) {
+        //         line->type = MD_LINE_ATXHEADER;
+        //         line->data = level;
+        //         break;
+        //     }
+        // }
 
         /* Check whether we are starting code fence. */
         if(CH(off) == _T('`') || CH(off) == _T('~')) {
@@ -5960,26 +5929,26 @@ md_analyze_line(MD_CTX* ctx, OFF beg, OFF* p_end,
             }
         }
 
-        /* Check for start of raw HTML block. */
-        if(CH(off) == _T('<')  &&  !(ctx->parser.flags & MD_FLAG_NOHTMLBLOCKS))
-        {
-            ctx->html_block_type = md_is_html_block_start_condition(ctx, off);
+        // /* Check for start of raw HTML block. */
+        // if(CH(off) == _T('<')  &&  !(ctx->parser.flags & MD_FLAG_NOHTMLBLOCKS))
+        // {
+        //     ctx->html_block_type = md_is_html_block_start_condition(ctx, off);
 
-            /* HTML block type 7 cannot interrupt paragraph. */
-            if(ctx->html_block_type == 7  &&  pivot_line->type == MD_LINE_TEXT)
-                ctx->html_block_type = 0;
+        //     /* HTML block type 7 cannot interrupt paragraph. */
+        //     if(ctx->html_block_type == 7  &&  pivot_line->type == MD_LINE_TEXT)
+        //         ctx->html_block_type = 0;
 
-            if(ctx->html_block_type > 0) {
-                /* The line itself also may immediately close the block. */
-                if(md_is_html_block_end_condition(ctx, off, &off) == ctx->html_block_type) {
-                    /* Make sure this is the last line of the block. */
-                    ctx->html_block_type = 0;
-                }
+        //     if(ctx->html_block_type > 0) {
+        //         /* The line itself also may immediately close the block. */
+        //         if(md_is_html_block_end_condition(ctx, off, &off) == ctx->html_block_type) {
+        //             /* Make sure this is the last line of the block. */
+        //             ctx->html_block_type = 0;
+        //         }
 
-                line->type = MD_LINE_HTML;
-                break;
-            }
-        }
+        //         line->type = MD_LINE_HTML;
+        //         break;
+        //     }
+        // }
 
         /* Check for table underline. */
         if((ctx->parser.flags & MD_FLAG_TABLES)  &&  pivot_line->type == MD_LINE_TEXT  &&
@@ -6062,16 +6031,16 @@ md_analyze_line(MD_CTX* ctx, OFF beg, OFF* p_end,
     /* Set end of the line. */
     line->end = off;
 
-    /* But for ATX header, we should exclude the optional trailing mark. */
-    if(line->type == MD_LINE_ATXHEADER) {
-        OFF tmp = line->end;
-        while(tmp > line->beg && CH(tmp-1) == _T(' '))
-            tmp--;
-        while(tmp > line->beg && CH(tmp-1) == _T('#'))
-            tmp--;
-        if(tmp == line->beg || CH(tmp-1) == _T(' ') || (ctx->parser.flags & MD_FLAG_PERMISSIVEATXHEADERS))
-            line->end = tmp;
-    }
+    // /* But for ATX header, we should exclude the optional trailing mark. */
+    // if(line->type == MD_LINE_ATXHEADER) {
+    //     OFF tmp = line->end;
+    //     while(tmp > line->beg && CH(tmp-1) == _T(' '))
+    //         tmp--;
+    //     while(tmp > line->beg && CH(tmp-1) == _T('#'))
+    //         tmp--;
+    //     if(tmp == line->beg || CH(tmp-1) == _T(' ') || (ctx->parser.flags & MD_FLAG_PERMISSIVEATXHEADERS))
+    //         line->end = tmp;
+    // }
 
     /* Trim trailing spaces. */
     if(line->type != MD_LINE_INDENTEDCODE  &&  line->type != MD_LINE_FENCEDCODE) {
@@ -6087,33 +6056,33 @@ md_analyze_line(MD_CTX* ctx, OFF beg, OFF* p_end,
 
     *p_end = off;
 
-    /* If we belong to a list after seeing a blank line, the list is loose. */
-    if(prev_line_has_list_loosening_effect  &&  line->type != MD_LINE_BLANK  &&  n_parents + n_brothers > 0) {
-        MD_CONTAINER* c = &ctx->containers[n_parents + n_brothers - 1];
-        if(c->ch != _T('>')) {
-            MD_BLOCK* block = (MD_BLOCK*) (((char*)ctx->block_bytes) + c->block_byte_off);
-            block->flags |= MD_BLOCK_LOOSE_LIST;
-        }
-    }
+    // /* If we belong to a list after seeing a blank line, the list is loose. */
+    // if(prev_line_has_list_loosening_effect  &&  line->type != MD_LINE_BLANK  &&  n_parents + n_brothers > 0) {
+    //     MD_CONTAINER* c = &ctx->containers[n_parents + n_brothers - 1];
+    //     if(c->ch != _T('>')) {
+    //         MD_BLOCK* block = (MD_BLOCK*) (((char*)ctx->block_bytes) + c->block_byte_off);
+    //         block->flags |= MD_BLOCK_LOOSE_LIST;
+    //     }
+    // }
 
     /* Leave any containers we are not part of anymore. */
     if(n_children == 0  &&  n_parents + n_brothers < ctx->n_containers)
         MD_CHECK(md_leave_child_containers(ctx, n_parents + n_brothers));
 
-    /* Enter any container we found a mark for. */
-    if(n_brothers > 0) {
-        MD_ASSERT(n_brothers == 1);
-        MD_CHECK(md_push_container_bytes(ctx, MD_BLOCK_LI,
-                    ctx->containers[n_parents].task_mark_off,
-                    (ctx->containers[n_parents].is_task ? CH(ctx->containers[n_parents].task_mark_off) : 0),
-                    MD_BLOCK_CONTAINER_CLOSER));
-        MD_CHECK(md_push_container_bytes(ctx, MD_BLOCK_LI,
-                    container.task_mark_off,
-                    (container.is_task ? CH(container.task_mark_off) : 0),
-                    MD_BLOCK_CONTAINER_OPENER));
-        ctx->containers[n_parents].is_task = container.is_task;
-        ctx->containers[n_parents].task_mark_off = container.task_mark_off;
-    }
+    // /* Enter any container we found a mark for. */
+    // if(n_brothers > 0) {
+    //     MD_ASSERT(n_brothers == 1);
+    //     MD_CHECK(md_push_container_bytes(ctx, MD_BLOCK_LI,
+    //                 ctx->containers[n_parents].task_mark_off,
+    //                 (ctx->containers[n_parents].is_task ? CH(ctx->containers[n_parents].task_mark_off) : 0),
+    //                 MD_BLOCK_CONTAINER_CLOSER));
+    //     MD_CHECK(md_push_container_bytes(ctx, MD_BLOCK_LI,
+    //                 container.task_mark_off,
+    //                 (container.is_task ? CH(container.task_mark_off) : 0),
+    //                 MD_BLOCK_CONTAINER_OPENER));
+    //     ctx->containers[n_parents].is_task = container.is_task;
+    //     ctx->containers[n_parents].task_mark_off = container.task_mark_off;
+    // }
 
     if(n_children > 0)
         MD_CHECK(md_enter_child_containers(ctx, n_children, line->data));
@@ -6135,48 +6104,48 @@ md_process_line(MD_CTX* ctx, const MD_LINE_ANALYSIS** p_pivot_line, MD_LINE_ANAL
         return 0;
     }
 
-    /* Some line types form block on their own. */
-    if(line->type == MD_LINE_HR || line->type == MD_LINE_ATXHEADER) {
-        MD_CHECK(md_end_current_block(ctx));
+    // /* Some line types form block on their own. */
+    // if(line->type == MD_LINE_HR || line->type == MD_LINE_ATXHEADER) {
+    //     MD_CHECK(md_end_current_block(ctx));
 
-        /* Add our single-line block. */
-        MD_CHECK(md_start_new_block(ctx, line));
-        MD_CHECK(md_add_line_into_current_block(ctx, line));
-        MD_CHECK(md_end_current_block(ctx));
-        *p_pivot_line = &md_dummy_blank_line;
-        return 0;
-    }
+    //     /* Add our single-line block. */
+    //     MD_CHECK(md_start_new_block(ctx, line));
+    //     MD_CHECK(md_add_line_into_current_block(ctx, line));
+    //     MD_CHECK(md_end_current_block(ctx));
+    //     *p_pivot_line = &md_dummy_blank_line;
+    //     return 0;
+    // }
 
-    /* MD_LINE_SETEXTUNDERLINE changes meaning of the current block and ends it. */
-    if(line->type == MD_LINE_SETEXTUNDERLINE) {
-        MD_ASSERT(ctx->current_block != NULL);
-        ctx->current_block->type = MD_BLOCK_H;
-        ctx->current_block->data = line->data;
-        ctx->current_block->flags |= MD_BLOCK_SETEXT_HEADER;
-        MD_CHECK(md_add_line_into_current_block(ctx, line));
-        MD_CHECK(md_end_current_block(ctx));
-        if(ctx->current_block == NULL) {
-            *p_pivot_line = &md_dummy_blank_line;
-        } else {
-            /* This happens if we have consumed all the body as link ref. defs.
-             * and downgraded the underline into start of a new paragraph block. */
-            line->type = MD_LINE_TEXT;
-            *p_pivot_line = line;
-        }
-        return 0;
-    }
+    // /* MD_LINE_SETEXTUNDERLINE changes meaning of the current block and ends it. */
+    // if(line->type == MD_LINE_SETEXTUNDERLINE) {
+    //     MD_ASSERT(ctx->current_block != NULL);
+    //     ctx->current_block->type = MD_BLOCK_H;
+    //     ctx->current_block->data = line->data;
+    //     ctx->current_block->flags |= MD_BLOCK_SETEXT_HEADER;
+    //     MD_CHECK(md_add_line_into_current_block(ctx, line));
+    //     MD_CHECK(md_end_current_block(ctx));
+    //     if(ctx->current_block == NULL) {
+    //         *p_pivot_line = &md_dummy_blank_line;
+    //     } else {
+    //         /* This happens if we have consumed all the body as link ref. defs.
+    //          * and downgraded the underline into start of a new paragraph block. */
+    //         line->type = MD_LINE_TEXT;
+    //         *p_pivot_line = line;
+    //     }
+    //     return 0;
+    // }
 
-    /* MD_LINE_TABLEUNDERLINE changes meaning of the current block. */
-    if(line->type == MD_LINE_TABLEUNDERLINE) {
-        MD_ASSERT(ctx->current_block != NULL);
-        MD_ASSERT(ctx->current_block->n_lines == 1);
-        ctx->current_block->type = MD_BLOCK_TABLE;
-        ctx->current_block->data = line->data;
-        MD_ASSERT(pivot_line != &md_dummy_blank_line);
-        ((MD_LINE_ANALYSIS*)pivot_line)->type = MD_LINE_TABLE;
-        MD_CHECK(md_add_line_into_current_block(ctx, line));
-        return 0;
-    }
+    // /* MD_LINE_TABLEUNDERLINE changes meaning of the current block. */
+    // if(line->type == MD_LINE_TABLEUNDERLINE) {
+    //     MD_ASSERT(ctx->current_block != NULL);
+    //     MD_ASSERT(ctx->current_block->n_lines == 1);
+    //     ctx->current_block->type = MD_BLOCK_TABLE;
+    //     ctx->current_block->data = line->data;
+    //     MD_ASSERT(pivot_line != &md_dummy_blank_line);
+    //     ((MD_LINE_ANALYSIS*)pivot_line)->type = MD_LINE_TABLE;
+    //     MD_CHECK(md_add_line_into_current_block(ctx, line));
+    //     return 0;
+    // }
 
     /* The current block also ends if the line has different type. */
     if(line->type != pivot_line->type)

@@ -25,19 +25,19 @@ if (!debug) {
   module({...m})
 
   // node cjs module
-  module({ ...m,
-    name:    "markdown-node",
-    out:     outdir + "/markdown.node.js",
-    target:  "node",
-    embed:   true,
-  })
+  // module({ ...m,
+  //   name:    "markdown-node",
+  //   out:     outdir + "/markdown.node.js",
+  //   target:  "node",
+  //   embed:   true,
+  // })
 }
 
-// node es module
-module({ ...m,
-  name:    "markdown-es",
-  out:     outdir + "/markdown.es.js",
-  format:  "es",
-  target:  "node",
-  embed:   true,
-})
+// // node es module
+// module({ ...m,
+//   name:    "markdown-es",
+//   out:     outdir + "/markdown.es.js",
+//   format:  "es",
+//   target:  "node",
+//   embed:   true,
+// })

@@ -182,27 +182,27 @@ static void render_attribute(HtmlRenderer* r, const MD_ATTRIBUTE* attr) {
 }
 
 
-static void render_open_ol_block(HtmlRenderer* r, const MD_BLOCK_OL_DETAIL* det) {
-  if (det->start == 1) {
-    render_literal(r, "<ol>\n");
-  } else {
-    render_literal(r, "<ol start=\"");
-    WBufAppendU32(r->outbuf, det->start, 10);
-    render_literal(r, "\">\n");
-  }
-}
+// static void render_open_ol_block(HtmlRenderer* r, const MD_BLOCK_OL_DETAIL* det) {
+//   if (det->start == 1) {
+//     render_literal(r, "<ol>\n");
+//   } else {
+//     render_literal(r, "<ol start=\"");
+//     WBufAppendU32(r->outbuf, det->start, 10);
+//     render_literal(r, "\">\n");
+//   }
+// }
 
-static void render_open_li_block(HtmlRenderer* r, const MD_BLOCK_LI_DETAIL* det) {
-  if (det->is_task) {
-    render_literal(r, "<li class=\"task-list-item\"><input type=\"checkbox\" disabled");
-    if (det->task_mark == 'x' || det->task_mark == 'X') {
-      render_literal(r, " checked");
-    }
-    render_char(r, '>');
-  } else {
-    render_literal(r, "<li>");
-  }
-}
+// static void render_open_li_block(HtmlRenderer* r, const MD_BLOCK_LI_DETAIL* det) {
+//   if (det->is_task) {
+//     render_literal(r, "<li class=\"task-list-item\"><input type=\"checkbox\" disabled");
+//     if (det->task_mark == 'x' || det->task_mark == 'X') {
+//       render_literal(r, " checked");
+//     }
+//     render_char(r, '>');
+//   } else {
+//     render_literal(r, "<li>");
+//   }
+// }
 
 static void render_open_code_block(HtmlRenderer* r, const MD_BLOCK_CODE_DETAIL* det) {
   render_literal(r, "<pre><code");
@@ -264,57 +264,57 @@ static void render_open_wikilink_span(HtmlRenderer* r, const MD_SPAN_WIKILINK_DE
 
 
 static int enter_block_callback(MD_BLOCKTYPE type, void* detail, void* userdata) {
-  static const MD_CHAR* head[6] = { "<h1>", "<h2>", "<h3>", "<h4>", "<h5>", "<h6>" };
+  // static const MD_CHAR* head[6] = { "<h1>", "<h2>", "<h3>", "<h4>", "<h5>", "<h6>" };
   HtmlRenderer* r = (HtmlRenderer*) userdata;
 
   switch(type) {
     case MD_BLOCK_DOC:      /* noop */ break;
-    case MD_BLOCK_QUOTE:    render_literal(r, "<blockquote>\n"); break;
-    case MD_BLOCK_UL:       render_literal(r, "<ul>\n"); break;
-    case MD_BLOCK_OL:       render_open_ol_block(r, (const MD_BLOCK_OL_DETAIL*)detail); break;
-    case MD_BLOCK_LI:       render_open_li_block(r, (const MD_BLOCK_LI_DETAIL*)detail); break;
-    case MD_BLOCK_HR:       render_literal(r, "<hr>\n"); break;
-    case MD_BLOCK_H:
-    {
-      render_literal(r, head[((MD_BLOCK_H_DETAIL*)detail)->level - 1]);
-      r->addanchor = 1;
-      break;
-    }
+    case MD_BLOCK_QUOTE:    render_literal(r, "<blockquote>"); break;
+    // case MD_BLOCK_UL:       render_literal(r, "<ul>\n"); break;
+    // case MD_BLOCK_OL:       render_open_ol_block(r, (const MD_BLOCK_OL_DETAIL*)detail); break;
+    // case MD_BLOCK_LI:       render_open_li_block(r, (const MD_BLOCK_LI_DETAIL*)detail); break;
+    // case MD_BLOCK_HR:       render_literal(r, "<hr>\n"); break;
+    // case MD_BLOCK_H:
+    // {
+    //   render_literal(r, head[((MD_BLOCK_H_DETAIL*)detail)->level - 1]);
+    //   r->addanchor = 1;
+    //   break;
+    // }
     case MD_BLOCK_CODE:     render_open_code_block(r, (const MD_BLOCK_CODE_DETAIL*) detail); break;
-    case MD_BLOCK_HTML:     /* noop */ break;
-    case MD_BLOCK_P:        render_literal(r, "<p>"); break;
-    case MD_BLOCK_TABLE:    render_literal(r, "<table>\n"); break;
-    case MD_BLOCK_THEAD:    render_literal(r, "<thead>\n"); break;
-    case MD_BLOCK_TBODY:    render_literal(r, "<tbody>\n"); break;
-    case MD_BLOCK_TR:       render_literal(r, "<tr>\n"); break;
-    case MD_BLOCK_TH:       render_open_td_block(r, true, (MD_BLOCK_TD_DETAIL*)detail); break;
-    case MD_BLOCK_TD:       render_open_td_block(r, false, (MD_BLOCK_TD_DETAIL*)detail); break;
+    // case MD_BLOCK_HTML:     /* noop */ break;
+    case MD_BLOCK_P:        /*render_literal(r, "<p>");*/ break;
+    // case MD_BLOCK_TABLE:    render_literal(r, "<table>\n"); break;
+    // case MD_BLOCK_THEAD:    render_literal(r, "<thead>\n"); break;
+    // case MD_BLOCK_TBODY:    render_literal(r, "<tbody>\n"); break;
+    // case MD_BLOCK_TR:       render_literal(r, "<tr>\n"); break;
+    // case MD_BLOCK_TH:       render_open_td_block(r, true, (MD_BLOCK_TD_DETAIL*)detail); break;
+    // case MD_BLOCK_TD:       render_open_td_block(r, false, (MD_BLOCK_TD_DETAIL*)detail); break;
   }
 
   return 0;
 }
 
 static int leave_block_callback(MD_BLOCKTYPE type, void* detail, void* userdata) {
-  static const MD_CHAR* head[6] = { "</h1>\n", "</h2>\n", "</h3>\n", "</h4>\n", "</h5>\n", "</h6>\n" };
+  // static const MD_CHAR* head[6] = { "</h1>\n", "</h2>\n", "</h3>\n", "</h4>\n", "</h5>\n", "</h6>\n" };
   HtmlRenderer* r = (HtmlRenderer*) userdata;
 
   switch(type) {
     case MD_BLOCK_DOC:      /*noop*/ break;
-    case MD_BLOCK_QUOTE:    render_literal(r, "</blockquote>\n"); break;
-    case MD_BLOCK_UL:       render_literal(r, "</ul>\n"); break;
-    case MD_BLOCK_OL:       render_literal(r, "</ol>\n"); break;
-    case MD_BLOCK_LI:       render_literal(r, "</li>\n"); break;
-    case MD_BLOCK_HR:       /*noop*/ break;
-    case MD_BLOCK_H:        render_literal(r, head[((MD_BLOCK_H_DETAIL*)detail)->level - 1]); break;
-    case MD_BLOCK_CODE:     render_literal(r, "</code></pre>\n"); break;
-    case MD_BLOCK_HTML:     /* noop */ break;
-    case MD_BLOCK_P:        render_literal(r, "</p>\n"); break;
-    case MD_BLOCK_TABLE:    render_literal(r, "</table>\n"); break;
-    case MD_BLOCK_THEAD:    render_literal(r, "</thead>\n"); break;
-    case MD_BLOCK_TBODY:    render_literal(r, "</tbody>\n"); break;
-    case MD_BLOCK_TR:       render_literal(r, "</tr>\n"); break;
-    case MD_BLOCK_TH:       render_literal(r, "</th>\n"); break;
-    case MD_BLOCK_TD:       render_literal(r, "</td>\n"); break;
+    case MD_BLOCK_QUOTE:    render_literal(r, "</blockquote>"); break;
+    // case MD_BLOCK_UL:       render_literal(r, "</ul>\n"); break;
+    // case MD_BLOCK_OL:       render_literal(r, "</ol>\n"); break;
+    // case MD_BLOCK_LI:       render_literal(r, "</li>\n"); break;
+    // case MD_BLOCK_HR:       /*noop*/ break;
+    // case MD_BLOCK_H:        render_literal(r, head[((MD_BLOCK_H_DETAIL*)detail)->level - 1]); break;
+    case MD_BLOCK_CODE:     render_literal(r, "</code></pre>"); break;
+    // case MD_BLOCK_HTML:     /* noop */ break;
+    case MD_BLOCK_P:        /*render_literal(r, "</p>\n");*/ break;
+    // case MD_BLOCK_TABLE:    render_literal(r, "</table>\n"); break;
+    // case MD_BLOCK_THEAD:    render_literal(r, "</thead>\n"); break;
+    // case MD_BLOCK_TBODY:    render_literal(r, "</tbody>\n"); break;
+    // case MD_BLOCK_TR:       render_literal(r, "</tr>\n"); break;
+    // case MD_BLOCK_TH:       render_literal(r, "</th>\n"); break;
+    // case MD_BLOCK_TD:       render_literal(r, "</td>\n"); break;
   }
 
   return 0;

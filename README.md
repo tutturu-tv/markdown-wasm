@@ -1,5 +1,7 @@
 # markdown-wasm
 
+Based on [rsms/markdown-wasm](http://github.com/rsms/markdown-wasm), with Tutturu-specific changes made
+
 Very fast Markdown parser & HTML renderer implemented in WebAssembly
 
 - Zero dependencies

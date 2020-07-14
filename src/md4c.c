@@ -5591,7 +5591,7 @@ md_is_container_mark(MD_CTX* ctx, unsigned indent, OFF beg, OFF* p_end, MD_CONTA
         return FALSE;
 
     /* Check for block quote mark. */
-    if(off < ctx->size  &&  CH(off) == _T('>')) {
+    if(off < ctx->size  &&  CH(off) == _T('>')  &&  CH(off+1) == _T(' ')) {
         off++;
         p_container->ch = _T('>');
         p_container->is_loose = FALSE;

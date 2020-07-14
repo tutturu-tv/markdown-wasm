@@ -5683,7 +5683,7 @@ md_analyze_line(MD_CTX* ctx, OFF beg, OFF* p_end,
     while(n_parents < ctx->n_containers) {
         MD_CONTAINER* c = &ctx->containers[n_parents];
 
-        if(c->ch == _T('>')  &&  line->indent < ctx->code_indent_offset  &&
+        if(c->ch == _T('>')  &&  // line->indent < ctx->code_indent_offset  &&
             off < ctx->size  &&  CH(off) == _T('>'))
         {
             /* Block quote mark. */
@@ -5698,9 +5698,9 @@ md_analyze_line(MD_CTX* ctx, OFF beg, OFF* p_end,
 
             line->beg = off;
 
-        } else if(c->ch != _T('>')  &&  line->indent >= c->contents_indent) {
-            /* List. */
-            line->indent -= c->contents_indent;
+        // } else if(c->ch != _T('>')  &&  line->indent >= c->contents_indent) {
+        //     /* List. */
+        //     line->indent -= c->contents_indent;
         } else {
             break;
         }
@@ -5861,18 +5861,18 @@ md_analyze_line(MD_CTX* ctx, OFF beg, OFF* p_end,
         // }
 
         /* Check for start of a new container block. */
-        if(line->indent < ctx->code_indent_offset  &&
+        if(//line->indent < ctx->code_indent_offset  &&
            md_is_container_mark(ctx, line->indent, off, &off, &container))
         {
-            if(pivot_line->type == MD_LINE_TEXT  &&  n_parents == ctx->n_containers  &&
-                        (off >= ctx->size || ISNEWLINE(off))  &&  container.ch != _T('>'))
-            {
-                /* Noop. List mark followed by a blank line cannot interrupt a paragraph. */
-            } else if(pivot_line->type == MD_LINE_TEXT  &&  n_parents == ctx->n_containers  &&
-                        (container.ch == _T('.') || container.ch == _T(')'))  &&  container.start != 1)
-            {
-                /* Noop. Ordered list cannot interrupt a paragraph unless the start index is 1. */
-            } else {
+            // if(pivot_line->type == MD_LINE_TEXT  &&  n_parents == ctx->n_containers  &&
+            //             (off >= ctx->size || ISNEWLINE(off))  &&  container.ch != _T('>'))
+            // {
+            //     /* Noop. List mark followed by a blank line cannot interrupt a paragraph. */
+            // } else if(pivot_line->type == MD_LINE_TEXT  &&  n_parents == ctx->n_containers  &&
+            //             (container.ch == _T('.') || container.ch == _T(')'))  &&  container.start != 1)
+            // {
+            //     /* Noop. Ordered list cannot interrupt a paragraph unless the start index is 1. */
+            // } else {
                 total_indent += container.contents_indent - container.mark_indent;
                 line->indent = md_line_indentation(ctx, total_indent, off, &off);
                 total_indent += line->indent;
@@ -5900,14 +5900,14 @@ md_analyze_line(MD_CTX* ctx, OFF beg, OFF* p_end,
                 n_children++;
                 MD_CHECK(md_push_container(ctx, &container));
                 continue;
-            }
+            // }
         }
 
-        /* Check whether we are table continuation. */
-        if(pivot_line->type == MD_LINE_TABLE  &&  n_parents == ctx->n_containers) {
-            line->type = MD_LINE_TABLE;
-            break;
-        }
+        // /* Check whether we are table continuation. */
+        // if(pivot_line->type == MD_LINE_TABLE  &&  n_parents == ctx->n_containers) {
+        //     line->type = MD_LINE_TABLE;
+        //     break;
+        // }
 
         // /* Check for ATX header. */
         // if(line->indent < ctx->code_indent_offset  &&  CH(off) == _T('#')) {
@@ -5950,21 +5950,21 @@ md_analyze_line(MD_CTX* ctx, OFF beg, OFF* p_end,
         //     }
         // }
 
-        /* Check for table underline. */
-        if((ctx->parser.flags & MD_FLAG_TABLES)  &&  pivot_line->type == MD_LINE_TEXT  &&
-           (CH(off) == _T('|') || CH(off) == _T('-') || CH(off) == _T(':'))  &&
-           n_parents == ctx->n_containers)
-        {
-            unsigned col_count;
+        // /* Check for table underline. */
+        // if((ctx->parser.flags & MD_FLAG_TABLES)  &&  pivot_line->type == MD_LINE_TEXT  &&
+        //    (CH(off) == _T('|') || CH(off) == _T('-') || CH(off) == _T(':'))  &&
+        //    n_parents == ctx->n_containers)
+        // {
+        //     unsigned col_count;
 
-            if(ctx->current_block != NULL  &&  ctx->current_block->n_lines == 1  &&
-                md_is_table_underline(ctx, off, &off, &col_count))
-            {
-                line->data = col_count;
-                line->type = MD_LINE_TABLEUNDERLINE;
-                break;
-            }
-        }
+        //     if(ctx->current_block != NULL  &&  ctx->current_block->n_lines == 1  &&
+        //         md_is_table_underline(ctx, off, &off, &col_count))
+        //     {
+        //         line->data = col_count;
+        //         line->type = MD_LINE_TABLEUNDERLINE;
+        //         break;
+        //     }
+        // }
 
         /* By default, we are normal text line. */
         line->type = MD_LINE_TEXT;

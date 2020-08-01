@@ -340,6 +340,7 @@ static int enter_span_callback(MD_SPANTYPE type, void* detail, void* userdata) {
     case MD_SPAN_LATEXMATH_DISPLAY: render_literal(r, "<x-equation type=\"display\">"); break;
     case MD_SPAN_WIKILINK:          render_open_wikilink_span(r, (MD_SPAN_WIKILINK_DETAIL*) detail); break;
     case MD_SPAN_U:                 render_literal(r, "<u>"); break;
+    case MD_SPAN_SPOILER:           render_literal(r, "<span class=\"md-spoiler\">"); break;
   }
 
   return 0;
@@ -367,6 +368,7 @@ static int leave_span_callback(MD_SPANTYPE type, void* detail, void* userdata) {
     case MD_SPAN_LATEXMATH_DISPLAY: render_literal(r, "</x-equation>"); break;
     case MD_SPAN_WIKILINK:          render_literal(r, "</x-wikilink>"); break;
     case MD_SPAN_U:                 render_literal(r, "</u>"); break;
+    case MD_SPAN_SPOILER:           render_literal(r, "</span>"); break;
   }
 
   return 0;

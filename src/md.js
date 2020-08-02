@@ -1,6 +1,6 @@
-import { utf8, withTmpBytePtr, withOutPtr, werrCheck } from "./wlib"
+import { werrCheck, withOutPtr, withTmpBytePtr } from "./wlib"
 
-export const ready = Module.ready
+// export const ready = Module.ready
 
 // console.time('wasm load')
 // Module.postRun.push(() => {
@@ -52,19 +52,19 @@ const defaultOptions = {
   asMemoryView: false,
 }
 
-export function parse(source, options) {
+export function parse(inst, source, options) {
   options = options ? {__proto__:defaultOptions, ...options} : defaultOptions
   let outflags = (0
     | (options.format == "html" ? OutputFlags.HTML : 0)
   )
 
-  let buf = typeof source == "string" ? utf8.encode(source) : source
-  let outbuf = withOutPtr(outptr => withTmpBytePtr(buf, (inptr, inlen) =>
-    _parseUTF8(inptr, inlen, options.parseFlags, outflags, outptr)
+  let buf = typeof source == "string" ? new TextEncoder("utf-8").encode(source) : source
+  let outbuf = withOutPtr(inst, outptr => withTmpBytePtr(inst, buf, (inptr, inlen) =>
+    inst.parseUTF8(inptr, inlen, options.parseFlags, outflags, outptr)
   ))
 
   // check for error and throw if needed
-  werrCheck()
+  werrCheck(inst)
 
   // if (outbuf) {
   //   console.log(utf8.decode(outbuf))
@@ -73,5 +73,5 @@ export function parse(source, options) {
   if (options.asMemoryView) {
     return outbuf
   }
-  return utf8.decode(outbuf)
+  return new TextDecoder("utf-8").decode(outbuf)
 }

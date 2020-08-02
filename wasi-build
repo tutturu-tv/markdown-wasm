@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# install wasi-sdk from https://github.com/WebAssembly/wasi-sdk to /opt/wasi-sdk
+
+/opt/wasi-sdk/bin/clang \
+  --sysroot=/opt/wasi-sdk/share/wasi-sysroot \
+  --target=wasm32-wasi \
+  -Oz \
+  -flto \
+  -Wl,--no-entry \
+  -Wl,--lto-O3 \
+  -Wl,-z,stack-size=$[8 * 1024 * 1024] \
+  -o dist/md.wasm \
+  src/fmt_html.c src/md4c.c src/md.c src/wbuf.c src/wlib.c

@@ -7,25 +7,30 @@ static const char* errmsg = "";
 static bool        errmsg_free = false;
 
 
-export void* wrealloc(void* ptr, size_t size) {
+__attribute__((export_name("wrealloc")))
+void* wrealloc(void* ptr, size_t size) {
   return realloc(ptr, size);
 }
 
-export void wfree(void* ptr) {
+__attribute__((export_name("wfree")))
+void wfree(void* ptr) {
   free(ptr);
 }
 
 
-export u32 WErrGetCode() {
+__attribute__((export_name("WErrGetCode")))
+u32 WErrGetCode() {
   return errcode;
 }
 
-export const char* WErrGetMsg() {
+__attribute__((export_name("WErrGetMsg")))
+const char* WErrGetMsg() {
   return errmsg;
 }
 
 
-export void WErrClear() {
+__attribute__((export_name("WErrClear")))
+void WErrClear() {
   errcode = 0;
   if (errmsg_free) {
     free((void*)errmsg);

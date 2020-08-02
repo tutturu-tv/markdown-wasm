@@ -23,9 +23,6 @@
  * IN THE SOFTWARE.
  */
 
-#include <string.h>
-#include <ctype.h>
-
 #include "common.h"
 #include "fmt_html.h"
 #include "md4c.h"

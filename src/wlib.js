@@ -10,18 +10,18 @@ export class WError extends Error {
 
 // Get & clear last WErr. Returns null if there was no error.
 // Uses a descriptive name so to help in stack traces.
-export function error_from_wasm() { // :WError|null
-  let code = _WErrGetCode()
+export function error_from_wasm({WErrGetCode, WErrGetMsg, WErrClear, memory}) { // :WError|null
+  let code = WErrGetCode()
   if (code != 0) {
-    let msgptr = _WErrGetMsg()
-    let message = msgptr != 0 ? UTF8ArrayToString(HEAPU8, msgptr) : ""
-    _WErrClear()
+    let msgptr = WErrGetMsg()
+    let message = msgptr != 0 ? UTF8ArrayToString(HEAPU8(memory), msgptr) : ""
+    WErrClear()
     return new WError(code, message)
   }
 }
 
-export function werrCheck() {
-  let err = error_from_wasm()
+export function werrCheck(inst) {
+  let err = error_from_wasm(inst)
   if (err) {
     throw err
   }
@@ -42,9 +42,9 @@ export function bytebuf(buf) {
 // from byteArray into the allocated location.
 // Returns the address to the allocated memory.
 //
-export function mallocbuf(byteArray, length) {
-  const offs = _wrealloc(0, length)
-  HEAPU8.set(byteArray, offs)
+export function mallocbuf({wrealloc, memory}, byteArray, length) {
+  const offs = wrealloc(0, length)
+  HEAPU8(memory).set(byteArray, offs)
   return offs
 }
 
@@ -52,8 +52,8 @@ export function mallocbuf(byteArray, length) {
 // Returns two values: original_address and aligned_address.
 // You should call free() with original_address.
 //
-export function malloc32(size) {
-  let ptr_orig = _wrealloc(0, size + 3)
+export function malloc32({wrealloc}, size) {
+  let ptr_orig = wrealloc(0, size + 3)
   return [ptr_orig, ptr_orig + (4 - (ptr_orig % 4))]
 }
 
@@ -61,16 +61,10 @@ export function malloc32(size) {
 // Returns two values: original_address and aligned_address.
 // You should call free() with original_address.
 //
-export function malloc16(size) {
-  let ptr_orig = _wrealloc(0, size + 1)
+export function malloc16({wrealloc}, size) {
+  let ptr_orig = wrealloc(0, size + 1)
   return [ptr_orig, ptr_orig + (ptr_orig % 2)]
 }
-
-// free wasm heap memory
-export function free(ptr) {
-  _wfree(ptr)
-}
-
 
 // writeUTF16Str writes str as UTF16 to address ptr.
 // ptr must be aligned on a 16-bit boundary.
@@ -88,12 +82,13 @@ export function writeUTF16Str(str, ptr) {
 // 2. calls fn(pointer, size)
 // 3. calls free(pointer)
 //
-export function withTmpBytePtr(buf, fn) {
+export function withTmpBytePtr(inst, buf, fn) {
+  const {wfree} = inst
   const u8buf = bytebuf(buf)
   const size = u8buf.length
-  const ptr = mallocbuf(u8buf, size)
+  const ptr = mallocbuf(inst, u8buf, size)
   const r = fn(ptr, size)
-  free(ptr)
+  wfree(ptr)
   return r
 }
 
@@ -103,13 +98,13 @@ export function withTmpBytePtr(buf, fn) {
 // 2. calls fn(aligned_pointer, bytesize)
 // 3. calls free(original_pointer)
 //
-export function withUTF16Str(str, fn) {
+export function withUTF16Str({wrealloc, wfree}, str, fn) {
   let bytesize = str.length * 2
-  let ptr = _wrealloc(0, bytesize + 1) // +1 for alignment
+  let ptr = wrealloc(0, bytesize + 1) // +1 for alignment
   let aligned_ptr = (ptr % 2 != 0) ? ptr + 1 : ptr
   writeUTF16Str(str, aligned_ptr, bytesize)
   let r = fn(aligned_ptr, bytesize)
-  free(ptr)
+  wfree(ptr)
   return r
 }
 
@@ -150,10 +145,17 @@ export function cstrStack(str) {
 // used by strFromUTF8Ptr as a temporary address-sized integer
 let tmpPtr = 0
 
-Module.postRun.push(() => {
-  tmpPtr = _wrealloc(0, 4)
-})
+// Module.postRun.push(() => {
+//   tmpPtr = _wrealloc(0, 4)
+// })
 
+function HEAPU8 ({buffer}) {
+  return new Uint8Array(buffer)
+}
+
+function HEAP32 ({buffer}) {
+  return new Int32Array(buffer)
+}
 
 // strFromUTF8Ptr provides a pointer-sized integer that can be written
 // to by fn. fn is expected to return the number of bytes written to the
@@ -174,11 +176,11 @@ Module.postRun.push(() => {
 // Synopsis:
 //   strFromUTF8Ptr( fn :(p:int)=>int )
 //
-export function strFromUTF8Ptr(fn) {
-  let z = fn(tmpPtr)
-  let offs = HEAP32[tmpPtr >> 2]
-  return z == 0 ? "" : utf8.decode(HEAPU8.subarray(offs, offs + z))
-}
+// export function strFromUTF8Ptr(fn) {
+//   let z = fn(tmpPtr)
+//   let offs = HEAP32[tmpPtr >> 2]
+//   return z == 0 ? "" : utf8.decode(HEAPU8.subarray(offs, offs + z))
+// }
 
 // withOutPtr facilitates the following:
 //
@@ -223,13 +225,14 @@ export function strFromUTF8Ptr(fn) {
 //   console.log("RGB:", color[0], color[1], color[2])
 //   _freeColor(color.heapAddr)
 //
-export function withOutPtr(fn) {
+export function withOutPtr({wrealloc, memory}, fn) {
+  tmpPtr = tmpPtr || wrealloc(0, 4)
   let len = fn(tmpPtr)
-  let addr = HEAP32[tmpPtr >> 2]
+  let addr = HEAP32(memory)[tmpPtr >> 2]
   if (addr == 0) {
     return null
   }
-  let buf = HEAPU8.subarray(addr, addr + len)
+  let buf = HEAPU8(memory).subarray(addr, addr + len)
   buf.heapAddr = addr
   return buf
 }
@@ -346,30 +349,30 @@ export function u32ToAsciiStr(u) {
 //   encode(s :string) :Uint8Array
 //   decode(b :Uint8Array) :string
 // }
-export const utf8 = typeof TextEncoder != 'undefined' ? (() => {
-  // Modern browsers
-  const enc = new TextEncoder("utf-8")
-  const dec = new TextDecoder("utf-8")
-  return {
-    encode: s => enc.encode(s),
-    decode: b => dec.decode(b),
-  };
-})() : typeof Buffer != 'undefined' ? {
-  // Nodejs
-  encode: s => new Uint8Array(Buffer.from(s, 'utf-8')),
-  decode: b =>
-    Buffer.from(b.buffer, b.byteOffset, b.byteLength).toString('utf8'),
-} : {
-  // Some other pesky JS environment
-  encode: s => {
-    let asciiBytes = [];
-    for (let i = 0, L = s.length; i != L; ++i) {
-      asciiBytes[i] = 0xff & s.charCodeAt(i);
-    }
-    return new Uint8Array(asciiBytes);
-  },
-  decode: b => String(b),
-}
+// export const utf8 = typeof TextEncoder != 'undefined' ? (() => {
+//   // Modern browsers
+//   const enc = new TextEncoder("utf-8")
+//   const dec = new TextDecoder("utf-8")
+//   return {
+//     encode: s => enc.encode(s),
+//     decode: b => dec.decode(b),
+//   };
+// })() : typeof Buffer != 'undefined' ? {
+//   // Nodejs
+//   encode: s => new Uint8Array(Buffer.from(s, 'utf-8')),
+//   decode: b =>
+//     Buffer.from(b.buffer, b.byteOffset, b.byteLength).toString('utf8'),
+// } : {
+//   // Some other pesky JS environment
+//   encode: s => {
+//     let asciiBytes = [];
+//     for (let i = 0, L = s.length; i != L; ++i) {
+//       asciiBytes[i] = 0xff & s.charCodeAt(i);
+//     }
+//     return new Uint8Array(asciiBytes);
+//   },
+//   decode: b => String(b),
+// }
 
 
 // Converts between 16.16 fixed-point number and 64-bit floating-point numbers

@@ -26,7 +26,6 @@
 #include "md4c.h"
 
 #include <limits.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -2401,6 +2400,7 @@ md_free_ref_defs(MD_CTX* ctx)
  * '\0': NULL char.
  *  '*': Maybe (strong) emphasis start/end.
  *  '_': Maybe (strong) emphasis start/end.
+ *  '|': Maybe spoiler start/end.
  *  '~': Maybe strikethrough start/end (needs MD_FLAG_STRIKETHROUGH).
  *  '`': Maybe code span start/end.
  *  '&': Maybe start of entity.
@@ -2481,7 +2481,7 @@ md_mark_chain(MD_CTX* ctx, int mark_index)
         case _T('_'):   return &UNDERSCORE_OPENERS;
         case _T('~'):   return (mark->end - mark->beg == 1) ? &TILDE_OPENERS_1 : &TILDE_OPENERS_2;
         case _T('['):   return &BRACKET_OPENERS;
-        case _T('|'):   return &TABLECELLBOUNDARIES;
+        // case _T('|'):   return &TABLECELLBOUNDARIES;
         default:        return NULL;
     }
 }
@@ -2683,6 +2683,7 @@ md_build_mark_char_map(MD_CTX* ctx)
     ctx->mark_char_map['\\'] = 1;
     ctx->mark_char_map['*'] = 1;
     ctx->mark_char_map['_'] = 1;
+    ctx->mark_char_map['|'] = 1;
     ctx->mark_char_map['`'] = 1;
     ctx->mark_char_map['&'] = 1;
     ctx->mark_char_map[';'] = 1;
@@ -2696,8 +2697,8 @@ md_build_mark_char_map(MD_CTX* ctx)
     if(ctx->parser.flags & MD_FLAG_STRIKETHROUGH)
         ctx->mark_char_map['~'] = 1;
 
-    if(ctx->parser.flags & MD_FLAG_LATEXMATHSPANS)
-        ctx->mark_char_map['$'] = 1;
+    // if(ctx->parser.flags & MD_FLAG_LATEXMATHSPANS)
+    //     ctx->mark_char_map['$'] = 1;
 
     if(ctx->parser.flags & MD_FLAG_PERMISSIVEEMAILAUTOLINKS)
         ctx->mark_char_map['@'] = 1;
@@ -2708,8 +2709,8 @@ md_build_mark_char_map(MD_CTX* ctx)
     if(ctx->parser.flags & MD_FLAG_PERMISSIVEWWWAUTOLINKS)
         ctx->mark_char_map['.'] = 1;
 
-    if((ctx->parser.flags & MD_FLAG_TABLES) || (ctx->parser.flags & MD_FLAG_WIKILINKS))
-        ctx->mark_char_map['|'] = 1;
+    // if((ctx->parser.flags & MD_FLAG_TABLES) || (ctx->parser.flags & MD_FLAG_WIKILINKS))
+    //     ctx->mark_char_map['|'] = 1;
 
     if(ctx->parser.flags & MD_FLAG_COLLAPSEWHITESPACE) {
         int i;
@@ -3248,12 +3249,12 @@ md_collect_marks(MD_CTX* ctx, const MD_LINE* lines, int n_lines, int table_mode)
                 continue;
             }
 
-            /* A potential table cell boundary or wiki link label delimiter. */
-            if((table_mode || ctx->parser.flags & MD_FLAG_WIKILINKS) && ch == _T('|')) {
-                PUSH_MARK(ch, off, off+1, 0);
-                off++;
-                continue;
-            }
+            // /* A potential table cell boundary or wiki link label delimiter. */
+            // if((table_mode || ctx->parser.flags & MD_FLAG_WIKILINKS) && ch == _T('|')) {
+            //     PUSH_MARK(ch, off, off+1, 0);
+            //     off++;
+            //     continue;
+            // }
 
             /* A potential strikethrough start/end. */
             if(ch == _T('~')) {
@@ -3277,20 +3278,35 @@ md_collect_marks(MD_CTX* ctx, const MD_LINE* lines, int n_lines, int table_mode)
                 continue;
             }
 
-            /* A potential equation start/end */
-            if(ch == _T('$')) {
+            /* A potential spoiler start/end. */
+            if(ch == _T('|')) {
                 /* We can have at most two consecutive $ signs,
                  * where two dollar signs signify a display equation. */
                 OFF tmp = off+1;
 
-                while(tmp < line_end && CH(tmp) == _T('$'))
+                while(tmp < line_end && CH(tmp) == _T('|'))
                     tmp++;
 
-                if (tmp - off <= 2)
-                    PUSH_MARK(ch, off, tmp, MD_MARK_POTENTIAL_OPENER | MD_MARK_POTENTIAL_CLOSER);
+                if (tmp - off >= 2)
+                    PUSH_MARK(ch, off, off+2, MD_MARK_POTENTIAL_OPENER | MD_MARK_POTENTIAL_CLOSER);
                 off = tmp;
                 continue;
             }
+
+            // /* A potential equation start/end */
+            // if(ch == _T('$')) {
+            //     /* We can have at most two consecutive $ signs,
+            //      * where two dollar signs signify a display equation. */
+            //     OFF tmp = off+1;
+
+            //     while(tmp < line_end && CH(tmp) == _T('$'))
+            //         tmp++;
+
+            //     if (tmp - off <= 2)
+            //         PUSH_MARK(ch, off, tmp, MD_MARK_POTENTIAL_OPENER | MD_MARK_POTENTIAL_CLOSER);
+            //     off = tmp;
+            //     continue;
+            // }
 
             /* Turn non-trivial whitespace into single space. */
             if(ISWHITESPACE_(ch)) {
@@ -3635,15 +3651,15 @@ md_analyze_entity(MD_CTX* ctx, int mark_index)
     }
 }
 
-static void
-md_analyze_table_cell_boundary(MD_CTX* ctx, int mark_index)
-{
-    MD_MARK* mark = &ctx->marks[mark_index];
-    mark->flags |= MD_MARK_RESOLVED;
+// static void
+// md_analyze_table_cell_boundary(MD_CTX* ctx, int mark_index)
+// {
+//     MD_MARK* mark = &ctx->marks[mark_index];
+//     mark->flags |= MD_MARK_RESOLVED;
 
-    md_mark_chain_append(ctx, &TABLECELLBOUNDARIES, mark_index);
-    ctx->n_table_cell_boundaries++;
-}
+//     md_mark_chain_append(ctx, &TABLECELLBOUNDARIES, mark_index);
+//     ctx->n_table_cell_boundaries++;
+// }
 
 /* Split a longer mark into two. The new mark takes the given count of
  * characters. May only be called if an adequate number of dummy 'D' marks
@@ -3941,11 +3957,12 @@ md_analyze_marks(MD_CTX* ctx, const MD_LINE* lines, int n_lines,
             case '!':   /* Pass through. */
             case ']':   md_analyze_bracket(ctx, i); break;
             case '&':   md_analyze_entity(ctx, i); break;
-            case '|':   md_analyze_table_cell_boundary(ctx, i); break;
+            // case '|':   md_analyze_table_cell_boundary(ctx, i); break;
             case '_':   /* Pass through. */
             case '*':   md_analyze_emph(ctx, i); break;
+            case '|':   md_analyze_dollar(ctx, i); break; // TODO: make separate function when enabling latex
             case '~':   md_analyze_tilde(ctx, i); break;
-            case '$':   md_analyze_dollar(ctx, i); break;
+            // case '$':   md_analyze_dollar(ctx, i); break;
             case '.':   /* Pass through. */
             case ':':   md_analyze_permissive_url_autolink(ctx, i); break;
             case '@':   md_analyze_permissive_email_autolink(ctx, i); break;
@@ -3979,17 +3996,17 @@ md_analyze_inlines(MD_CTX* ctx, const MD_LINE* lines, int n_lines, int table_mod
     ctx->unresolved_link_head = -1;
     ctx->unresolved_link_tail = -1;
 
-    if(table_mode) {
-        /* (3) Analyze table cell boundaries.
-         * Note we reset TABLECELLBOUNDARIES chain prior to the call md_analyze_marks(),
-         * not after, because caller may need it. */
-        MD_ASSERT(n_lines == 1);
-        TABLECELLBOUNDARIES.head = -1;
-        TABLECELLBOUNDARIES.tail = -1;
-        ctx->n_table_cell_boundaries = 0;
-        md_analyze_marks(ctx, lines, n_lines, 0, ctx->n_marks, _T("|"));
-        return ret;
-    }
+    // if(table_mode) {
+    //     /* (3) Analyze table cell boundaries.
+    //      * Note we reset TABLECELLBOUNDARIES chain prior to the call md_analyze_marks(),
+    //      * not after, because caller may need it. */
+    //     MD_ASSERT(n_lines == 1);
+    //     TABLECELLBOUNDARIES.head = -1;
+    //     TABLECELLBOUNDARIES.tail = -1;
+    //     ctx->n_table_cell_boundaries = 0;
+    //     md_analyze_marks(ctx, lines, n_lines, 0, ctx->n_marks, _T("|"));
+    //     return ret;
+    // }
 
     /* (4) Emphasis and strong emphasis; permissive autolinks. */
     md_analyze_link_contents(ctx, lines, n_lines, 0, ctx->n_marks);
@@ -4004,7 +4021,7 @@ md_analyze_link_contents(MD_CTX* ctx, const MD_LINE* lines, int n_lines,
 {
     int i;
 
-    md_analyze_marks(ctx, lines, n_lines, mark_beg, mark_end, _T("*_~$@:."));
+    md_analyze_marks(ctx, lines, n_lines, mark_beg, mark_end, _T("*_|~$@:."));
 
     for(i = OPENERS_CHAIN_FIRST; i <= OPENERS_CHAIN_LAST; i++) {
         ctx->mark_chains[i].head = -1;
@@ -4161,6 +4178,13 @@ md_process_inlines(MD_CTX* ctx, const MD_LINE* lines, int n_lines)
                     }
                     break;
 
+                case '|':
+                    if(mark->flags & MD_MARK_OPENER)
+                        MD_ENTER_SPAN(MD_SPAN_SPOILER, NULL);
+                    else
+                        MD_LEAVE_SPAN(MD_SPAN_SPOILER, NULL);
+                    break;
+
                 case '~':
                     if(mark->flags & MD_MARK_OPENER)
                         MD_ENTER_SPAN(MD_SPAN_DEL, NULL);
@@ -4168,15 +4192,15 @@ md_process_inlines(MD_CTX* ctx, const MD_LINE* lines, int n_lines)
                         MD_LEAVE_SPAN(MD_SPAN_DEL, NULL);
                     break;
 
-                case '$':
-                    if(mark->flags & MD_MARK_OPENER) {
-                        MD_ENTER_SPAN((mark->end - off) % 2 ? MD_SPAN_LATEXMATH : MD_SPAN_LATEXMATH_DISPLAY, NULL);
-                        text_type = MD_TEXT_LATEXMATH;
-                    } else {
-                        MD_LEAVE_SPAN((mark->end - off) % 2 ? MD_SPAN_LATEXMATH : MD_SPAN_LATEXMATH_DISPLAY, NULL);
-                        text_type = MD_TEXT_NORMAL;
-                    }
-                    break;
+                // case '$':
+                //     if(mark->flags & MD_MARK_OPENER) {
+                //         MD_ENTER_SPAN((mark->end - off) % 2 ? MD_SPAN_LATEXMATH : MD_SPAN_LATEXMATH_DISPLAY, NULL);
+                //         text_type = MD_TEXT_LATEXMATH;
+                //     } else {
+                //         MD_LEAVE_SPAN((mark->end - off) % 2 ? MD_SPAN_LATEXMATH : MD_SPAN_LATEXMATH_DISPLAY, NULL);
+                //         text_type = MD_TEXT_NORMAL;
+                //     }
+                //     break;
 
                 case '[':       /* Link, wiki link, image. */
                 case '!':
@@ -5135,63 +5159,63 @@ md_is_setext_underline(MD_CTX* ctx, OFF beg, OFF* p_end, unsigned* p_level)
     return TRUE;
 }
 
-static int
-md_is_table_underline(MD_CTX* ctx, OFF beg, OFF* p_end, unsigned* p_col_count)
-{
-    OFF off = beg;
-    int found_pipe = FALSE;
-    unsigned col_count = 0;
+// static int
+// md_is_table_underline(MD_CTX* ctx, OFF beg, OFF* p_end, unsigned* p_col_count)
+// {
+//     OFF off = beg;
+//     int found_pipe = FALSE;
+//     unsigned col_count = 0;
 
-    if(off < ctx->size  &&  CH(off) == _T('|')) {
-        found_pipe = TRUE;
-        off++;
-        while(off < ctx->size  &&  ISWHITESPACE(off))
-            off++;
-    }
+//     if(off < ctx->size  &&  CH(off) == _T('|')) {
+//         found_pipe = TRUE;
+//         off++;
+//         while(off < ctx->size  &&  ISWHITESPACE(off))
+//             off++;
+//     }
 
-    while(1) {
-        OFF cell_beg;
-        int delimited = FALSE;
+//     while(1) {
+//         OFF cell_beg;
+//         int delimited = FALSE;
 
-        /* Cell underline ("-----", ":----", "----:" or ":----:") */
-        cell_beg = off;
-        if(off < ctx->size  &&  CH(off) == _T(':'))
-            off++;
-        while(off < ctx->size  &&  CH(off) == _T('-'))
-            off++;
-        if(off < ctx->size  &&  CH(off) == _T(':'))
-            off++;
-        if(off - cell_beg < 3)
-            return FALSE;
+//         /* Cell underline ("-----", ":----", "----:" or ":----:") */
+//         cell_beg = off;
+//         if(off < ctx->size  &&  CH(off) == _T(':'))
+//             off++;
+//         while(off < ctx->size  &&  CH(off) == _T('-'))
+//             off++;
+//         if(off < ctx->size  &&  CH(off) == _T(':'))
+//             off++;
+//         if(off - cell_beg < 3)
+//             return FALSE;
 
-        col_count++;
+//         col_count++;
 
-        /* Pipe delimiter (optional at the end of line). */
-        while(off < ctx->size  &&  ISWHITESPACE(off))
-            off++;
-        if(off < ctx->size  &&  CH(off) == _T('|')) {
-            delimited = TRUE;
-            found_pipe =  TRUE;
-            off++;
-            while(off < ctx->size  &&  ISWHITESPACE(off))
-                off++;
-        }
+//         /* Pipe delimiter (optional at the end of line). */
+//         while(off < ctx->size  &&  ISWHITESPACE(off))
+//             off++;
+//         if(off < ctx->size  &&  CH(off) == _T('|')) {
+//             delimited = TRUE;
+//             found_pipe =  TRUE;
+//             off++;
+//             while(off < ctx->size  &&  ISWHITESPACE(off))
+//                 off++;
+//         }
 
-        /* Success, if we reach end of line. */
-        if(off >= ctx->size  ||  ISNEWLINE(off))
-            break;
+//         /* Success, if we reach end of line. */
+//         if(off >= ctx->size  ||  ISNEWLINE(off))
+//             break;
 
-        if(!delimited)
-            return FALSE;
-    }
+//         if(!delimited)
+//             return FALSE;
+//     }
 
-    if(!found_pipe)
-        return FALSE;
+//     if(!found_pipe)
+//         return FALSE;
 
-    *p_end = off;
-    *p_col_count = col_count;
-    return TRUE;
-}
+//     *p_end = off;
+//     *p_col_count = col_count;
+//     return TRUE;
+// }
 
 static int
 md_is_opening_code_fence(MD_CTX* ctx, OFF beg, OFF* p_end)

@@ -32,8 +32,8 @@ void __attribute__((constructor)) init() {
 // Must make sure to never use this across calls from WASM host.
 static WBuf outbuf;
 
-
-export size_t parseUTF8(
+__attribute__((export_name("parseUTF8")))
+size_t parseUTF8(
   const char* inbufptr,
   u32 inbuflen,
   u32 parser_flags,
@@ -64,3 +64,5 @@ export size_t parseUTF8(
   *outptr = 0;
   return 0;
 }
+
+int main() {}

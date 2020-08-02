@@ -144,7 +144,10 @@ typedef enum MD_SPANTYPE {
 
     /* <u>...</u>
      * Note: Recognized only when MD_FLAG_UNDERLINE is enabled. */
-    MD_SPAN_U
+    MD_SPAN_U,
+
+    /* <span class="md-spoiler">...</span> */
+    MD_SPAN_SPOILER
 } MD_SPANTYPE;
 
 /* Text is the actual textual contents of span. */
